@@ -9,16 +9,11 @@ import           Data.ByteString
 import           Snap.Types
 import qualified Snap.Types as T
 import           Snap.Util.FileServe
-import           Text.Templating.Heist
-import           Text.Templating.Heist.TemplateDirectory
 
-import           Glue
 import           Server
 
 import           Text.Blaze.Html5
-import           Text.Blaze.Html5.Attributes
 import qualified Text.Blaze.Html5 as H
-import qualified Text.Blaze.Html5.Attributes as A
 
 main :: IO ()
 main = quickServer $ 
@@ -30,8 +25,8 @@ main = quickServer $
 
 echoHandler :: Snap ()
 echoHandler = do
-    param <- getParam "echoparam"
-    writeLBS $ renderHtml (echoView param)
+    echoparam <- getParam "echoparam"
+    writeLBS $ renderHtml (echoView echoparam)
 
 echoView :: Maybe ByteString -> Html a
 echoView s = html $ do
