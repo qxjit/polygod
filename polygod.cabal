@@ -21,8 +21,6 @@ Executable polygod
     bytestring >= 0.9.1 && <0.10,
     snap-core >= 0.2 && <0.3,
     snap-server >= 0.2 && <0.3,
-    heist >= 0.2.2 && <0.3,
-    hexpat == 0.16,
     xhtml-combinators,
     blaze-html >= 0.1.2 && < 0.2,
     unix,
