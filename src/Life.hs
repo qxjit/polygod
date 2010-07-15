@@ -11,6 +11,7 @@ module Life
   , cellAt
   , cells
   , neighboringAddresses
+  , fate
   )
   where
 
@@ -48,6 +49,10 @@ cellAt (World ary) ix = ary ! ix
 
 cells :: World -> [Cell]
 cells (World ary) = elems ary
+
+fate :: Cell -> [Cell] -> Cell
+fate Dead neighbors = if (length (filter (==Alive) neighbors)) == 3 then Alive else Dead
+fate Alive neighbors = if (length (filter (==Alive) neighbors)) `elem` [2,3] then Alive else Dead
 
 neighboringAddresses :: World -> Address -> [Address]
 neighboringAddresses world (x, y) = map offset cases

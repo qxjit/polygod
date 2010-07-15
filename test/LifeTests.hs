@@ -4,6 +4,7 @@ import Life
 import Test.Framework
 import Test.Framework.Providers.QuickCheck2
 
+import Control.Monad
 import Data.List
 
 import Test.QuickCheck
@@ -36,9 +37,15 @@ tests = testGroup "Life"
       let (width, height) = size world
           addressWithinBounds (neighborX, neighborY)= neighborX < width && neighborY < height
       in  all addressWithinBounds (neighboringAddresses world address)
+
+  , "a Dead cell is birthed by exactly 3 live neighbors" `testProperty` \(NeighborList neighbors) ->
+      (fate Dead neighbors == Alive) == (length (filter (==Alive) neighbors) == 3)
+  , "an Alive cell with 2 or 3 live neighbors lives" `testProperty` \(NeighborList neighbors) ->
+      (fate Alive neighbors == Alive) == (length (filter (==Alive) neighbors) `elem` [2,3])
   ]
 
 data AddressInWorld = AddressInWorld World Address deriving (Show)
+data NeighborList = NeighborList [Cell] deriving (Show)
 
 instance Arbitrary World where
   arbitrary = do
@@ -57,3 +64,6 @@ instance Arbitrary AddressInWorld where
     x <- choose (0, width - 1)
     y <- choose (0, height - 1)
     return $ AddressInWorld world (x, y)
+
+instance Arbitrary NeighborList where
+  arbitrary = liftM NeighborList (vector 8)
