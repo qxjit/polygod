@@ -9,25 +9,31 @@ module Life
   , evolve
   , setCellAt
   , cellAt
+  , cells
+  , neighboringAddresses
   )
   where
 
 import Data.Array.IArray
 
-data Cell = Alive | Dead deriving (Show)
+data Cell = Alive | Dead deriving (Show, Eq)
 type Dimension = Int
 type Address = (Dimension, Dimension)
 
-newtype World = World (Array Address Cell) deriving (Show)
+newtype World = World (Array Address Cell)
+
+instance Show World where
+  show world = "World " ++ (show $ size world)
 
 newWorld :: Address -> World
 newWorld worldSize = newWorldWithCells worldSize (cycle [Dead, Alive])
 
 newWorldWithCells :: Address -> [Cell] -> World
-newWorldWithCells worldSize cells = World $ listArray ((0,0), worldSize) cells
+newWorldWithCells (width, height) cells = World $ listArray ((0,0), (width-1, height-1)) cells
 
 size :: World -> Address
-size (World ary) = snd $ bounds ary
+size (World ary) = (maxX + 1, maxY + 1)
+  where (maxX, maxY) = snd $ bounds ary
 
 evolve :: World -> World
 evolve (World ary) = World $ amap flipCell ary
@@ -39,3 +45,12 @@ setCellAt w _ _ = w
 
 cellAt :: World -> Address -> Cell
 cellAt (World ary) ix = ary ! ix
+
+cells :: World -> [Cell]
+cells (World ary) = elems ary
+
+neighboringAddresses :: World -> Address -> [Address]
+neighboringAddresses world (x, y) = map offset cases
+  where (width, height) = size world
+        cases = [(dX, dY) | dX <- [-1..1], dY <- [-1..1], not (dX == 0 && dY == 0)]
+        offset (dX, dY) = ((x + dX) `mod` width, (y + dY) `mod` height)
