@@ -49,9 +49,9 @@ worldView w = html $ do
         H.title "World"
     body $ do
         let (width, height) = size w
-        forM_ [0..height] $ \y -> do
+        forM_ [0..height - 1] $ \y -> do
           H.div $ do
-            forM [0..width] $ \x -> do
+            forM [0..width - 1] $ \x -> do
               case (cellAt w (x, y)) of
                 Alive -> "* "
                 Dead -> "- "

@@ -37,9 +37,8 @@ size (World ary) = (maxX + 1, maxY + 1)
   where (maxX, maxY) = snd $ bounds ary
 
 evolve :: World -> World
-evolve (World ary) = World $ amap flipCell ary
-  where flipCell Alive = Dead
-        flipCell Dead = Alive
+evolve world@(World ary) = World $ array (bounds ary) (map newCellAt $ indices ary)
+  where newCellAt ix = (ix, fate (cellAt world ix) (map (cellAt world) (neighboringAddresses world ix)))
 
 setCellAt :: World -> Address -> Cell -> World
 setCellAt w _ _ = w
