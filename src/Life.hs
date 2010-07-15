@@ -4,6 +4,7 @@ module Life
   , Address
   , World
   , newWorld
+  , newWorldWithCells
   , size
   , evolve
   , setCellAt
@@ -13,14 +14,17 @@ module Life
 
 import Data.Array.IArray
 
-data Cell = Alive | Dead
+data Cell = Alive | Dead deriving (Show)
 type Dimension = Int
 type Address = (Dimension, Dimension)
 
-newtype World = World (Array Address Cell)
+newtype World = World (Array Address Cell) deriving (Show)
 
 newWorld :: Address -> World
-newWorld worldSize = World $ listArray ((0,0), worldSize) (cycle [Dead, Alive])
+newWorld worldSize = newWorldWithCells worldSize (cycle [Dead, Alive])
+
+newWorldWithCells :: Address -> [Cell] -> World
+newWorldWithCells worldSize cells = World $ listArray ((0,0), worldSize) cells
 
 size :: World -> Address
 size (World ary) = snd $ bounds ary
