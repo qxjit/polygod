@@ -4,6 +4,7 @@ module Main where
 import           Prelude
 import qualified Prelude as P
 import           Control.Monad
+import           Control.Monad.Trans
 import           Control.Applicative
 import           Data.ByteString
 
@@ -17,20 +18,25 @@ import           Text.Blaze.Html5
 import qualified Text.Blaze.Html5 as H
 
 import           Life
+import           Timeline
 
 main :: IO ()
-main = quickServer $
+main = do
+  timeline <- newTimeline (30, 30)
+  quickServer $
         ifTop (writeBS "hello world") <|>
         route [ ("echo/:echoparam", echoHandler)
-              , ("world", worldHandler)
+              , ("world", worldHandler timeline)
               ] <|>
         T.dir "static" (fileServe ".")
 
 blazeTemplate :: Html a -> Snap ()
 blazeTemplate = writeLBS . renderHtml
 
-worldHandler :: Snap ()
-worldHandler = blazeTemplate $ worldView (newWorld (30, 30))
+worldHandler :: Timeline -> Snap ()
+worldHandler timeline =  do
+  world <- liftIO (now timeline)
+  blazeTemplate $ worldView world
 
 echoHandler :: Snap ()
 echoHandler = do

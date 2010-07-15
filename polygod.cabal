@@ -20,6 +20,7 @@ Executable polygod
     monads-fd >= 0.1 && <0.2,
     bytestring >= 0.9.1 && <0.10,
     array >= 0.3 && <0.4,
+    stm >= 2.1.2 && <3,
     snap-core >= 0.2 && <0.3,
     snap-server >= 0.2 && <0.3,
     xhtml-combinators,
