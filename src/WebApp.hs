@@ -34,10 +34,16 @@ main = do
   timeline <- newTimeline (30, 30)
   quickServer $
         ifTop rootHandler <|>
-        route [ ("world.json", worldHandler timeline)
-              , ("world/:tick/next.json", nextWorldHandler timeline)
-              ] <|>
+        noCache (route [ ("world.json", worldHandler timeline)
+                       , ("world/:tick/next.json", nextWorldHandler timeline)
+                       ]) <|>
         fileServe "public"
+
+noCache :: Snap () -> Snap ()
+noCache handler = do
+  modifyResponse (setHeader "Pragma" "no-cache")
+  modifyResponse (setHeader "Cache-Control" "no-cache")
+  handler
 
 blazeTemplate :: Html a -> Snap ()
 blazeTemplate = writeLBS . renderHtml
@@ -63,13 +69,13 @@ worldHandler timeline =  do
 
 nextWorldHandler :: Timeline -> Snap ()
 nextWorldHandler timeline = do
-  -- todo error handling
   Just tickString <- getParam "tick"
-  let [(tick, [])] = readDec (P.map (chr . fromIntegral) (unpack tickString))
-  (world, tick') <- liftIO (worldAfter tick timeline)
-  jsonTemplate $ worldView world tick'
+  case readDec (P.map (chr . fromIntegral) (unpack tickString)) of
+    [(tick, [])] -> do (world, tick') <- liftIO (worldAfter tick timeline)
+                       jsonTemplate $ worldView world tick'
+    _ -> pass
 
-worldView :: World -> Tick-> JSON
+worldView :: World -> Tick -> JSON
 worldView w tick = Object $ fromList [("tick", Number $ fromIntegral tick),
                                       ("cells", Array $ [cellJson (x, y) | x <- [0..width - 1], y <- [0..width - 1]])]
   where (width, height) = Life.size w
