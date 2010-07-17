@@ -20,6 +20,10 @@ import qualified Text.Blaze.Html5.Attributes as A
 
 import           Text.JSONb
 import           Data.Trie
+import           Data.Char
+import           Data.ByteString
+
+import           Numeric
 
 import           Life
 import qualified Life as Life
@@ -31,6 +35,7 @@ main = do
   quickServer $
         ifTop rootHandler <|>
         route [ ("world.json", worldHandler timeline)
+              , ("world/:tick/next.json", nextWorldHandler timeline)
               ] <|>
         fileServe "public"
 
@@ -53,13 +58,22 @@ rootHandler = blazeTemplate $ html $ do
 
 worldHandler :: Timeline -> Snap ()
 worldHandler timeline =  do
-  world <- liftIO (now timeline)
-  jsonTemplate $ worldView world
+  (world, tick) <- liftIO (now timeline)
+  jsonTemplate $ worldView world tick
 
-worldView :: World -> JSON
-worldView w = Array $ [cellJson (x, y) | x <- [0..width - 1], y <- [0..width - 1]]
+nextWorldHandler :: Timeline -> Snap ()
+nextWorldHandler timeline = do
+  -- todo error handling
+  Just tickString <- getParam "tick"
+  let [(tick, [])] = readDec (P.map (chr . fromIntegral) (unpack tickString))
+  (world, tick') <- liftIO (worldAfter tick timeline)
+  jsonTemplate $ worldView world tick'
+
+worldView :: World -> Tick-> JSON
+worldView w tick = Object $ fromList [("tick", Number $ fromIntegral tick),
+                                      ("cells", Array $ [cellJson (x, y) | x <- [0..width - 1], y <- [0..width - 1]])]
   where (width, height) = Life.size w
-        cellJson (x, y) = Object $ fromList [("point", Array [Number$ fromIntegral  x, Number $ fromIntegral y]),
+        cellJson (x, y) = Object $ fromList [("point", Array [Number$ fromIntegral x, Number $ fromIntegral y]),
                                              ("alive", Boolean $ isAlive (cellAt w (x, y)))]
         isAlive Alive = True
         isAlive _ = False

@@ -27,7 +27,11 @@ instance Show World where
   show world = "World " ++ (show $ size world)
 
 newWorld :: Address -> World
-newWorld worldSize = newWorldWithCells worldSize (cycle [Dead, Alive])
+newWorld worldSize = newWorldWithCells worldSize $ cycle (concat (concatMap (replicate 6) [[Dead, Alive, Dead, Dead, Dead],
+                                                                                           [Dead, Dead, Alive, Dead, Dead],
+                                                                                           [Alive, Alive, Alive, Dead, Dead],
+                                                                                           [Dead, Dead, Dead, Dead, Dead],
+                                                                                           [Dead, Dead, Dead, Dead, Dead]]))
 
 newWorldWithCells :: Address -> [Cell] -> World
 newWorldWithCells (width, height) cells = World $ listArray ((0,0), (width-1, height-1)) cells
