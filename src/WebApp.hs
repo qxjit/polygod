@@ -18,6 +18,9 @@ import qualified Text.Blaze.Html5 as H
 import           Text.Blaze.Html5.Attributes
 import qualified Text.Blaze.Html5.Attributes as A
 
+import           Text.JSONb
+import           Data.Trie
+
 import           Life
 import qualified Life as Life
 import           Timeline
@@ -27,12 +30,15 @@ main = do
   timeline <- newTimeline (30, 30)
   quickServer $
         ifTop rootHandler <|>
-        route [ ("world", worldHandler timeline)
+        route [ ("world.json", worldHandler timeline)
               ] <|>
         fileServe "public"
 
 blazeTemplate :: Html a -> Snap ()
 blazeTemplate = writeLBS . renderHtml
+
+jsonTemplate :: JSON -> Snap ()
+jsonTemplate = writeLBS . encode Compact
 
 rootHandler :: Snap ()
 rootHandler = blazeTemplate $ html $ do
@@ -48,18 +54,13 @@ rootHandler = blazeTemplate $ html $ do
 worldHandler :: Timeline -> Snap ()
 worldHandler timeline =  do
   world <- liftIO (now timeline)
-  blazeTemplate $ worldView world
+  jsonTemplate $ worldView world
 
-worldView :: World -> Html a
-worldView w = html $ do
-  H.head $ do
-      H.title "World"
-  body $ do
-      let (width, height) = Life.size w
-      forM_ [0..height - 1] $ \y -> do
-        H.div $ do
-          forM [0..width - 1] $ \x -> do
-            case (cellAt w (x, y)) of
-              Alive -> "* "
-              Dead -> "- "
+worldView :: World -> JSON
+worldView w = Array $ [cellJson (x, y) | x <- [0..width - 1], y <- [0..width - 1]]
+  where (width, height) = Life.size w
+        cellJson (x, y) = Object $ fromList [("point", Array [Number$ fromIntegral  x, Number $ fromIntegral y]),
+                                             ("alive", Boolean $ isAlive (cellAt w (x, y)))]
+        isAlive Alive = True
+        isAlive _ = False
 
