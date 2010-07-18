@@ -34,8 +34,8 @@ main = do
   timeline <- newTimeline (30, 30)
   quickServer $
         ifTop rootHandler <|>
-        noCache (route [ ("world.json", worldHandler timeline)
-                       , ("world/:tick/next.json", nextWorldHandler timeline)
+        noCache (route [ ("world/current.json", worldHandler timeline)
+                       , ("world/next.json", nextWorldHandler timeline)
                        ]) <|>
         fileServe "public"
 
@@ -43,6 +43,7 @@ noCache :: Snap () -> Snap ()
 noCache handler = do
   modifyResponse (setHeader "Pragma" "no-cache")
   modifyResponse (setHeader "Cache-Control" "no-cache")
+  modifyResponse (setHeader "Expires" "-1")
   handler
 
 blazeTemplate :: Html a -> Snap ()
@@ -69,11 +70,13 @@ worldHandler timeline =  do
 
 nextWorldHandler :: Timeline -> Snap ()
 nextWorldHandler timeline = do
-  Just tickString <- getParam "tick"
-  case readDec (P.map (chr . fromIntegral) (unpack tickString)) of
-    [(tick, [])] -> do (world, tick') <- liftIO (worldAfter tick timeline)
-                       jsonTemplate $ worldView world tick'
-    _ -> pass
+  tickParam <- getParam "tick"
+  maybe pass (\tickString ->
+                  case readDec (P.map (chr . fromIntegral) (unpack tickString)) of
+                    [(tick, [])] -> do (world, tick') <- liftIO (worldAfter tick timeline)
+                                       jsonTemplate $ worldView world tick'
+                    _ -> pass)
+        tickParam
 
 worldView :: World -> Tick -> JSON
 worldView w tick = Object $ fromList [("tick", Number $ fromIntegral tick),

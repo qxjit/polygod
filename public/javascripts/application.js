@@ -20,21 +20,25 @@ $(window).load(function() {
 
 
     $.ajax({
-      url: 'world/' + world.tick + '/next.json',
+      url: 'world/next.json?tick=' + world.tick,
       dataType: 'json',
       success: updateWorld,
+      cache: false,
       error: function(req, status, error) {
         alert("Ajax error Updating World!");
       }
     });
   };
 
-  $.ajax({
-    url: 'world.json',
-    dataType: 'json',
-    success: updateWorld,
-    error: function(req, status, error) {
-      alert("Ajax error Loading World!");
-    }
-  });
+  setTimeout(function() {
+    $.ajax({
+      url: 'world/current.json',
+      dataType: 'json',
+      success: updateWorld,
+      cache: false,
+      error: function(req, status, error) {
+        alert("Ajax error Loading World!");
+      }
+    });
+  }, 100);
 });
