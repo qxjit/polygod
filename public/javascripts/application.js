@@ -17,7 +17,7 @@ $(window).load(function() {
   var context = canvas.getContext('2d');
   context.fillStyle = "#FF0000";
 
-  var updateWorld = function(world) {
+  var repaintWorld = function(world) {
     $(world.cells).each(function(index) {
       var x = this.point[0]*cellSize;
       var y = this.point[1]*cellSize;
@@ -28,11 +28,10 @@ $(window).load(function() {
       }
     });
 
-
     $.ajax({
       url: 'world/next.json?tick=' + world.tick,
       dataType: 'json',
-      success: updateWorld,
+      success: repaintWorld,
       cache: false,
       error: function(req, status, error) {
         alert("Ajax error Updating World!");
@@ -40,11 +39,36 @@ $(window).load(function() {
     });
   };
 
+  var updateWorld = function(event) {
+    var offset = $(canvas).offset();
+    var worldX = Math.floor( (event.pageX - offset.left) / cellSize);
+    var worldY = Math.floor( (event.pageY - offset.top) / cellSize);
+
+    $.ajax({
+      type: 'POST',
+      url: 'world',
+      data: JSON.stringify({cells: [ { point: [worldX, worldY], alive: true} ] }),
+      cache: false,
+      error: function(req, status, error) {
+        alert("Ajax error Updating World!");
+      }
+    });
+  };
+
+  $(canvas).mousedown(function(event) {
+    updateWorld(event);
+    $(this).mousemove(updateWorld);
+  });
+
+  $(canvas).mouseup(function(event) {
+    $(this).unbind('mousemove', updateWorld);
+  });
+
   setTimeout(function() {
     $.ajax({
       url: 'world/current.json',
       dataType: 'json',
-      success: updateWorld,
+      success: repaintWorld,
       cache: false,
       error: function(req, status, error) {
         alert("Ajax error Loading World!");
