@@ -1,7 +1,9 @@
 module Timeline
   ( Timeline
+  , Tick
   , newTimeline
   , now
+  , worldAfter
   , interfere
   )
   where
@@ -10,26 +12,35 @@ import Control.Monad
 import Control.Concurrent
 import Control.Concurrent.STM
 
+import Data.Word
+
 import Life
 
-newtype Timeline = Timeline (TVar World)
+type Tick = Word16
+newtype Timeline = Timeline (TVar (World,Tick))
 
-oneSecond :: Int
-oneSecond = 1000 * 1000
+tickDelay :: Int
+tickDelay = 1000 * 250
 
 newTimeline :: Address -> IO Timeline
 newTimeline a = do
-  timeline <- liftM Timeline (newTVarIO (newWorld a))
+  timeline <- liftM Timeline (newTVarIO (newWorld a, 0))
   forkIO $ do
     forever $ do
-      threadDelay oneSecond
+      threadDelay tickDelay
       interfere evolve timeline
   return timeline
 
-now :: Timeline -> IO World
+now :: Timeline -> IO (World, Tick)
 now (Timeline tvar) = readTVarIO tvar
+
+worldAfter :: Tick -> Timeline -> IO (World, Tick)
+worldAfter oldTick (Timeline tvar) = atomically $ do
+  (world, newTick) <- readTVar tvar
+  check (oldTick /= newTick)
+  return (world, newTick)
 
 interfere :: (World -> World) -> Timeline -> IO ()
 interfere f (Timeline tvar) = atomically $ do
-  world <- readTVar tvar
-  writeTVar tvar (f world)
+  (!world, tick) <- readTVar tvar
+  writeTVar tvar ((f world), tick + 1)
