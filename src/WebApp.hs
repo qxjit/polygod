@@ -22,6 +22,7 @@ import           Text.JSONb
 import           Data.Trie
 import           Data.Char
 import           Data.ByteString
+import           Data.String
 
 import           Numeric
 
@@ -29,9 +30,13 @@ import           Life
 import qualified Life as Life
 import           Timeline
 
+worldWidth, worldHeight :: Dimension
+worldWidth = 100
+worldHeight = 50
+
 main :: IO ()
 main = do
-  timeline <- newTimeline (30, 30)
+  timeline <- newTimeline (worldWidth, worldWidth)
   quickServer $
         ifTop rootHandler <|>
         noCache (route [ ("world/current.json", worldHandler timeline)
@@ -61,7 +66,9 @@ rootHandler = blazeTemplate $ html $ do
     (link ! rel "stylesheet" ! type_ "text/css" ! href "stylesheets/application.css")
   body $ do
     h1 "Welcome to Polygod"
-    (canvas ! A.id "game-canvas") ""
+    (canvas ! A.id "game-canvas"
+            ! dataAttribute "width" (fromString $ show worldWidth)
+            ! dataAttribute "height" (fromString $ show worldHeight)) ""
 
 worldHandler :: Timeline -> Snap ()
 worldHandler timeline =  do
@@ -80,7 +87,7 @@ nextWorldHandler timeline = do
 
 worldView :: World -> Tick -> JSON
 worldView w tick = Object $ fromList [("tick", Number $ fromIntegral tick),
-                                      ("cells", Array $ [cellJson (x, y) | x <- [0..width - 1], y <- [0..width - 1]])]
+                                      ("cells", Array $ [cellJson (x, y) | x <- [0..width - 1], y <- [0..height - 1]])]
   where (width, height) = Life.size w
         cellJson (x, y) = Object $ fromList [("point", Array [Number$ fromIntegral x, Number $ fromIntegral y]),
                                              ("alive", Boolean $ isAlive (cellAt w (x, y)))]

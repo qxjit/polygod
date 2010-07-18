@@ -1,20 +1,30 @@
 $(window).load(function() {
   var canvas = $('#game-canvas')[0]
 
-  canvas.width = 300;
-  canvas.height = 300;
+  var worldWidth = canvas.getAttribute('data-width');
+  var worldHeight = canvas.getAttribute('data-height');
+
+  var frame = $(window);
+
+  var maximumCellWidth = frame.width() * 0.8 / worldWidth;
+  var maximumCellHeight = frame.height() * 0.7 / worldHeight;
+
+  var cellSize = Math.round(Math.min(maximumCellWidth, maximumCellHeight));
+
+  canvas.width = worldWidth * cellSize;
+  canvas.height = worldHeight * cellSize;
 
   var context = canvas.getContext('2d');
   context.fillStyle = "#FF0000";
 
   var updateWorld = function(world) {
     $(world.cells).each(function(index) {
-      var x = this.point[0]*10;
-      var y = this.point[1]*10;
+      var x = this.point[0]*cellSize;
+      var y = this.point[1]*cellSize;
       if (this.alive) {
-        context.fillRect(x, y, 10, 10);
+        context.fillRect(x, y, cellSize, cellSize);
       } else {
-        context.clearRect(x, y, 10, 10);
+        context.clearRect(x, y, cellSize, cellSize);
       }
     });
 
