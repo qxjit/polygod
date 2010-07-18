@@ -16,12 +16,13 @@ module Life
   where
 
 import Data.Array.IArray
+import Data.Array.Unboxed
 
 data Cell = Alive | Dead deriving (Show, Eq)
 type Dimension = Int
 type Address = (Dimension, Dimension)
 
-newtype World = World (Array Address Cell)
+newtype World = World (UArray Address Bool)
 
 instance Show World where
   show world = "World " ++ (show $ size world)
@@ -33,8 +34,16 @@ newWorld worldSize = newWorldWithCells worldSize $ cycle (concat (concatMap (rep
                                                                                            [Dead, Dead, Dead, Dead, Dead],
                                                                                            [Dead, Dead, Dead, Dead, Dead]]))
 
+toCell :: Bool -> Cell
+toCell True = Alive
+toCell False = Dead
+
+fromCell :: Cell -> Bool
+fromCell Alive = True
+fromCell Dead = False
+
 newWorldWithCells :: Address -> [Cell] -> World
-newWorldWithCells (width, height) cells = World $ listArray ((0,0), (width-1, height-1)) cells
+newWorldWithCells (width, height) cells = World $ listArray ((0,0), (width-1, height-1)) (map fromCell cells)
 
 size :: World -> Address
 size (World ary) = (maxX + 1, maxY + 1)
@@ -42,16 +51,16 @@ size (World ary) = (maxX + 1, maxY + 1)
 
 evolve :: World -> World
 evolve world@(World ary) = World $ array (bounds ary) (map newCellAt $ indices ary)
-  where newCellAt ix = (ix, fate (cellAt world ix) (map (cellAt world) (neighboringAddresses world ix)))
+  where newCellAt ix = (ix, fromCell $ fate (cellAt world ix) (map (cellAt world) (neighboringAddresses world ix)))
 
 setCellAt :: World -> Address -> Cell -> World
 setCellAt w _ _ = w
 
 cellAt :: World -> Address -> Cell
-cellAt (World ary) ix = ary ! ix
+cellAt (World ary) ix = toCell (ary ! ix)
 
 cells :: World -> [Cell]
-cells (World ary) = elems ary
+cells (World ary) = map toCell (elems ary)
 
 fate :: Cell -> [Cell] -> Cell
 fate Dead neighbors = if (length (filter (==Alive) neighbors)) == 3 then Alive else Dead

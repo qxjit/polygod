@@ -42,5 +42,5 @@ worldAfter oldTick (Timeline tvar) = atomically $ do
 
 interfere :: (World -> World) -> Timeline -> IO ()
 interfere f (Timeline tvar) = atomically $ do
-  (world, tick) <- readTVar tvar
+  (!world, tick) <- readTVar tvar
   writeTVar tvar ((f world), tick + 1)
