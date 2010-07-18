@@ -9,7 +9,7 @@ $(window).load(function() {
   var maximumCellWidth = frame.width() * 0.8 / worldWidth;
   var maximumCellHeight = frame.height() * 0.7 / worldHeight;
 
-  var cellSize = Math.round(Math.min(maximumCellWidth, maximumCellHeight));
+  var cellSize = Math.floor(Math.min(maximumCellWidth, maximumCellHeight));
 
   canvas.width = worldWidth * cellSize;
   canvas.height = worldHeight * cellSize;
