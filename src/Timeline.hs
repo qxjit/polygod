@@ -17,30 +17,34 @@ import Data.Word
 import Life
 
 type Tick = Word16
-newtype Timeline = Timeline (TVar (World,Tick))
+data Timeline a = Timeline (TVar (World,Tick,a)) (World -> Tick -> a)
 
 tickDelay :: Int
 tickDelay = 1000 * 250
 
-newTimeline :: Address -> IO Timeline
-newTimeline a = do
-  timeline <- liftM Timeline (newTVarIO (newWorld a, 0))
+newTimeline :: Address -> (World -> Tick -> a) -> IO (Timeline a)
+newTimeline addr f = do
+  let world = newWorld addr
+  tvar <- (newTVarIO (world, 0, f world 0))
+  let timeline = Timeline tvar f
   forkIO $ do
     forever $ do
       threadDelay tickDelay
       interfere evolve timeline
   return timeline
 
-now :: Timeline -> IO (World, Tick)
-now (Timeline tvar) = readTVarIO tvar
+now :: Timeline a -> IO (World, Tick, a)
+now (Timeline tvar _) = readTVarIO tvar
 
-worldAfter :: Tick -> Timeline -> IO (World, Tick)
-worldAfter oldTick (Timeline tvar) = atomically $ do
-  (world, newTick) <- readTVar tvar
+worldAfter :: Tick -> Timeline a -> IO (World, Tick, a)
+worldAfter oldTick (Timeline tvar _) = atomically $ do
+  (world, newTick, x) <- readTVar tvar
   check (oldTick /= newTick)
-  return (world, newTick)
+  return (world, newTick, x)
 
-interfere :: (World -> World) -> Timeline -> IO ()
-interfere f (Timeline tvar) = atomically $ do
-  (!world, tick) <- readTVar tvar
-  writeTVar tvar ((f world), tick + 1)
+interfere :: (World -> World) -> Timeline a -> IO ()
+interfere f (Timeline tvar g) = atomically $ do
+  (!world, !tick, _) <- readTVar tvar
+  let world' = f world
+      tick' = tick + 1
+  writeTVar tvar (world', tick', g world' tick')

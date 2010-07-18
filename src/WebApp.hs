@@ -20,6 +20,7 @@ import qualified Text.Blaze.Html5.Attributes as A
 
 import           Text.JSONb
 import           Data.Trie
+import qualified Data.Trie as Trie
 import           Data.Char
 import           Data.ByteString
 import           Data.String
@@ -36,7 +37,7 @@ worldHeight = 50
 
 main :: IO ()
 main = do
-  timeline <- newTimeline (worldWidth, worldWidth)
+  timeline <- newTimeline (worldWidth, worldWidth) (\world tick -> jsonTemplate (worldView world tick))
   quickServer $
         ifTop rootHandler <|>
         noCache (route [ ("world/current.json", worldHandler timeline)
@@ -70,27 +71,30 @@ rootHandler = blazeTemplate $ html $ do
             ! dataAttribute "width" (fromString $ show worldWidth)
             ! dataAttribute "height" (fromString $ show worldHeight)) ""
 
-worldHandler :: Timeline -> Snap ()
+worldHandler :: Timeline (Snap ()) -> Snap ()
 worldHandler timeline =  do
-  (world, tick) <- liftIO (now timeline)
-  jsonTemplate $ worldView world tick
+  (_, _, renderedJSON) <- liftIO (now timeline)
+  renderedJSON
 
-nextWorldHandler :: Timeline -> Snap ()
+nextWorldHandler :: Timeline (Snap ()) -> Snap ()
 nextWorldHandler timeline = do
   tickParam <- getParam "tick"
   maybe pass (\tickString ->
                   case readDec (P.map (chr . fromIntegral) (unpack tickString)) of
-                    [(tick, [])] -> do (world, tick') <- liftIO (worldAfter tick timeline)
-                                       jsonTemplate $ worldView world tick'
+                    [(tick, [])] -> do (_, _, renderedJSON) <- liftIO (worldAfter tick timeline)
+                                       renderedJSON
                     _ -> pass)
         tickParam
 
 worldView :: World -> Tick -> JSON
-worldView w tick = Object $ fromList [("tick", Number $ fromIntegral tick),
-                                      ("cells", Array $ [cellJson (x, y) | x <- [0..width - 1], y <- [0..height - 1]])]
+worldView w tick = Object $ add (Trie.singleton "tick" (Number $ fromIntegral tick))
+                                                "cells" (Array $ [cellJson (x, y) | x <- [0..width - 1], y <- [0..height - 1]])
   where (width, height) = Life.size w
-        cellJson (x, y) = Object $ fromList [("point", Array [Number$ fromIntegral x, Number $ fromIntegral y]),
-                                             ("alive", Boolean $ isAlive (cellAt w (x, y)))]
+        cellJson (x, y) = Object $ add (Trie.singleton "point" (Array [Number$ fromIntegral x, Number $ fromIntegral y]))
+                                                       "alive" (Boolean $ isAlive (cellAt w (x, y)))
         isAlive Alive = True
         isAlive _ = False
+
+add :: Trie JSON -> KeyString -> JSON -> Trie JSON
+add t k j = alterBy (\_ new _ -> Just new) k j t
 
