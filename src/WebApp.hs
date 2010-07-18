@@ -19,10 +19,13 @@ import qualified Text.Blaze.Html5 as H
 
 import           Life
 import           Timeline
+import           Pattern
 
 main :: IO ()
 main = do
-  timeline <- newTimeline (30, 30)
+  timeline <- newTimeline (50, 30)
+  pattern <- loadPattern "gospersGliderGun.txt"
+  interfere (drawPatternAt (0, 0) pattern) timeline
   quickServer $
         ifTop (writeBS "hello world") <|>
         route [ ("echo/:echoparam", echoHandler)
