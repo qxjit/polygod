@@ -38,11 +38,11 @@ worldHeight = 50
 
 main :: IO ()
 main = do
-  timeline <- newTimeline (worldWidth, worldWidth) (\world tick -> jsonTemplate (worldView world tick))
+  timeline <- newTimeline (worldWidth, worldHeight) (\world tick -> jsonTemplate (worldView world tick))
   pattern <- loadPattern "gospersGliderGun.txt"
   interfere (drawPatternAt (0, 0) pattern) timeline
   quickServer $
-        ifTop rootHandler <|>
+        ifTop (rootHandler timeline) <|>
         noCache (route [ ("world/current.json", worldHandler timeline)
                        , ("world/next.json", nextWorldHandler timeline)
                        ]) <|>
@@ -61,18 +61,21 @@ blazeTemplate = writeLBS . renderHtml
 jsonTemplate :: JSON -> Snap ()
 jsonTemplate = writeLBS . encode Compact
 
-rootHandler :: Snap ()
-rootHandler = blazeTemplate $ html $ do
-  H.head $ do
-    H.title "Polygod -- A Multiplayer Game Of Life"
-    (script ! type_ "text/javascript" ! src "http://code.jquery.com/jquery-1.4.2.min.js") ""
-    (script ! type_ "text/javascript" ! src "javascripts/application.js") ""
-    (link ! rel "stylesheet" ! type_ "text/css" ! href "stylesheets/application.css")
-  body $ do
-    h1 "Welcome to Polygod"
-    (canvas ! A.id "game-canvas"
-            ! dataAttribute "width" (fromString $ show worldWidth)
-            ! dataAttribute "height" (fromString $ show worldHeight)) ""
+rootHandler :: Timeline a -> Snap ()
+rootHandler timeline = do
+  (world, _, _) <- liftIO (now timeline)
+  let (wWidth, wHeight) = Life.size world
+  blazeTemplate $ html $ do
+    H.head $ do
+      H.title "Polygod -- A Multiplayer Game Of Life"
+      (script ! type_ "text/javascript" ! src "http://code.jquery.com/jquery-1.4.2.min.js") ""
+      (script ! type_ "text/javascript" ! src "javascripts/application.js") ""
+      (link ! rel "stylesheet" ! type_ "text/css" ! href "stylesheets/application.css")
+    body $ do
+      h1 "Welcome to Polygod"
+      (canvas ! A.id "game-canvas"
+              ! dataAttribute "width" (fromString $ show wWidth)
+              ! dataAttribute "height" (fromString $ show wHeight)) ""
 
 worldHandler :: Timeline (Snap ()) -> Snap ()
 worldHandler timeline =  do
@@ -91,9 +94,9 @@ nextWorldHandler timeline = do
 
 worldView :: World -> Tick -> JSON
 worldView w tick = Object $ add (Trie.singleton "tick" (Number $ fromIntegral tick))
-                                                "cells" (Array $ [cellJson (x, y) | x <- [0..width - 1], y <- [0..height - 1]])
-  where (width, height) = Life.size w
-        cellJson (x, y) = Object $ add (Trie.singleton "point" (Array [Number$ fromIntegral x, Number $ fromIntegral y]))
+                                                "cells" (Array $ [cellJson (x, y) | x <- [0..wWidth - 1], y <- [0..wHeight - 1]])
+  where (wWidth, wHeight) = Life.size w
+        cellJson (x, y) = Object $ add (Trie.singleton "point" (Array [Number $ fromIntegral x, Number $ fromIntegral y]))
                                                        "alive" (Boolean $ isAlive (cellAt w (x, y)))
         isAlive Alive = True
         isAlive _ = False
