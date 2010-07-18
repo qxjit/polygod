@@ -7,7 +7,7 @@ module Life
   , newWorldWithCells
   , size
   , evolve
-  , setCellAt
+  , updateCells
   , cellAt
   , cells
   , neighboringAddresses
@@ -28,11 +28,7 @@ instance Show World where
   show world = "World " ++ (show $ size world)
 
 newWorld :: Address -> World
-newWorld worldSize = newWorldWithCells worldSize $ cycle (concat (concatMap (replicate 6) [[Dead, Alive, Dead, Dead, Dead],
-                                                                                           [Dead, Dead, Alive, Dead, Dead],
-                                                                                           [Alive, Alive, Alive, Dead, Dead],
-                                                                                           [Dead, Dead, Dead, Dead, Dead],
-                                                                                           [Dead, Dead, Dead, Dead, Dead]]))
+newWorld worldSize = newWorldWithCells worldSize (cycle [Dead])
 
 toCell :: Bool -> Cell
 toCell True = Alive
@@ -53,8 +49,9 @@ evolve :: World -> World
 evolve world@(World ary) = World $ array (bounds ary) (map newCellAt $ indices ary)
   where newCellAt ix = (ix, fromCell $ fate (cellAt world ix) (map (cellAt world) (neighboringAddresses world ix)))
 
-setCellAt :: World -> Address -> Cell -> World
-setCellAt w _ _ = w
+updateCells:: World -> [(Address, Cell)] -> World
+updateCells (World ary) updates = World $ (ary // boolUpdates) where
+  boolUpdates = map (\(address, cell) -> (address, fromCell cell)) updates
 
 cellAt :: World -> Address -> Cell
 cellAt (World ary) ix = toCell (ary ! ix)

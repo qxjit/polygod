@@ -30,6 +30,7 @@ import           Numeric
 import           Life
 import qualified Life as Life
 import           Timeline
+import           Pattern
 
 worldWidth, worldHeight :: Dimension
 worldWidth = 100
@@ -38,6 +39,8 @@ worldHeight = 50
 main :: IO ()
 main = do
   timeline <- newTimeline (worldWidth, worldWidth) (\world tick -> jsonTemplate (worldView world tick))
+  pattern <- loadPattern "gospersGliderGun.txt"
+  interfere (drawPatternAt (0, 0) pattern) timeline
   quickServer $
         ifTop rootHandler <|>
         noCache (route [ ("world/current.json", worldHandler timeline)
