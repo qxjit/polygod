@@ -6,6 +6,7 @@ module Life
   , newWorld
   , newWorldWithCells
   , size
+  , addresses
   , evolve
   , updateCells
   , cellAt
@@ -39,18 +40,22 @@ fromCell Alive = True
 fromCell Dead = False
 
 newWorldWithCells :: Address -> [Cell] -> World
-newWorldWithCells (width, height) cells = World $ listArray ((0,0), (width-1, height-1)) (map fromCell cells)
+newWorldWithCells (width, height) initialCells = World $ listArray ((0,0), (width-1, height-1)) (map fromCell initialCells)
 
 size :: World -> Address
 size (World ary) = (maxX + 1, maxY + 1)
   where (maxX, maxY) = snd $ bounds ary
 
+
+addresses :: World -> [Address]
+addresses (World ary) = indices ary
+
 evolve :: World -> World
 evolve world@(World ary) = World $ array (bounds ary) (map newCellAt $ indices ary)
   where newCellAt ix = (ix, fromCell $ fate (cellAt world ix) (map (cellAt world) (neighboringAddresses world ix)))
 
-updateCells:: World -> [(Address, Cell)] -> World
-updateCells (World ary) updates = World $ (ary // boolUpdates) where
+updateCells:: [(Address, Cell)] -> World -> World
+updateCells updates (World ary) = World $ (ary // boolUpdates) where
   boolUpdates = map (\(address, cell) -> (address, fromCell cell)) updates
 
 cellAt :: World -> Address -> Cell

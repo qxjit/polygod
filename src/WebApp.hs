@@ -1,9 +1,7 @@
-{-# LANGUAGE OverloadedStrings #-}
 module WebApp where
 
 import           Prelude
 import qualified Prelude as P
-import           Control.Monad
 import           Control.Monad.Trans
 import           Control.Applicative
 
@@ -19,16 +17,18 @@ import           Text.Blaze.Html5.Attributes
 import qualified Text.Blaze.Html5.Attributes as A
 
 import           Text.JSONb
-import           Data.Trie
-import qualified Data.Trie as Trie
+import qualified Text.JSONb as Json
 import           Data.Char
 import           Data.ByteString
+import qualified Data.ByteString as Strict
+import qualified Data.ByteString.Lazy as Lazy
 import           Data.String
 
 import           Numeric
 
 import           Life
 import qualified Life as Life
+import           Life.JSON
 import           Timeline
 import           Pattern
 
@@ -45,6 +45,7 @@ main = do
         ifTop (rootHandler timeline) <|>
         noCache (route [ ("world/current.json", worldHandler timeline)
                        , ("world/next.json", nextWorldHandler timeline)
+                       , ("world", updateWorldHandler timeline)
                        ]) <|>
         fileServe "public"
 
@@ -59,7 +60,16 @@ blazeTemplate :: Html a -> Snap ()
 blazeTemplate = writeLBS . renderHtml
 
 jsonTemplate :: JSON -> Snap ()
-jsonTemplate = writeLBS . encode Compact
+jsonTemplate = writeBS . encode Compact
+
+badPost :: ByteString -> Snap ()
+badPost message = do
+        putResponse $
+          setResponseStatus 400 "Bad Request" emptyResponse
+        writeBS message
+        r <- getResponse
+        finishWith r
+
 
 rootHandler :: Timeline a -> Snap ()
 rootHandler timeline = do
@@ -77,6 +87,16 @@ rootHandler timeline = do
               ! dataAttribute "width" (fromString $ show wWidth)
               ! dataAttribute "height" (fromString $ show wHeight)) ""
 
+updateWorldHandler :: Timeline a -> Snap ()
+updateWorldHandler timeline = do
+  body <- getRequestBody
+  case (Json.decode (Strict.concat . Lazy.toChunks $ body)) of
+    Right json -> case (jsonToCells json) of
+                  Just cells -> do liftIO $ interfere (updateCells cells) timeline
+                                   writeBS "Divine intervention successful.  Happy godding!\n"
+                  _ -> badPost "The JSON you posted didn't include any properly structured cell data.\n"
+    Left _ -> badPost "The post data was not valid JSON.  Please use JSON format to post updates to the world.\n"
+
 worldHandler :: Timeline (Snap ()) -> Snap ()
 worldHandler timeline =  do
   (_, _, renderedJSON) <- liftIO (now timeline)
@@ -93,14 +113,7 @@ nextWorldHandler timeline = do
         tickParam
 
 worldView :: World -> Tick -> JSON
-worldView w tick = Object $ add (Trie.singleton "tick" (Number $ fromIntegral tick))
-                                                "cells" (Array $ [cellJson (x, y) | x <- [0..wWidth - 1], y <- [0..wHeight - 1]])
-  where (wWidth, wHeight) = Life.size w
-        cellJson (x, y) = Object $ add (Trie.singleton "point" (Array [Number $ fromIntegral x, Number $ fromIntegral y]))
-                                                       "alive" (Boolean $ isAlive (cellAt w (x, y)))
-        isAlive Alive = True
-        isAlive _ = False
+worldView world tick = let (Object trie) = worldToJson world
+                       in Object $ add trie "tick" (Number $ fromIntegral tick)
 
-add :: Trie JSON -> KeyString -> JSON -> Trie JSON
-add t k j = alterBy (\_ new _ -> Just new) k j t
 

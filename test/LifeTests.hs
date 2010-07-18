@@ -1,15 +1,8 @@
 module LifeTests where
 
 import Life
-import Test.Framework
-import Test.Framework.Providers.QuickCheck2
-
-import Control.Monad
 import Data.List
-
-import Test.QuickCheck
-import Test.QuickCheck.Gen
-import Test.QuickCheck.Arbitrary
+import TestHelper
 
 tests :: Test
 tests = testGroup "Life"
@@ -29,8 +22,8 @@ tests = testGroup "Life"
 
   , "distance of neighbors should be less than 2" `testProperty` \(AddressInWorld world address) ->
       let (width, height) = size world
-          toroidalDifference coord1 coord2 ceiling = min (abs (coord1 - coord2)) (ceiling - abs (coord1 - coord2))
-          distance (x1, y1) (x2, y2) = (toroidalDifference x1 x2 width)^2 + (toroidalDifference y1 y2 height)^2
+          toroidalDifference coord1 coord2 ceil = min (abs (coord1 - coord2)) (ceil - abs (coord1 - coord2))
+          distance (x1, y1) (x2, y2) = (toroidalDifference x1 x2 width)^(2::Int) + (toroidalDifference y1 y2 height)^(2::Int)
       in  maximum (map (distance address) (neighboringAddresses world address)) <= 2
 
   , "neighbors should be within bounds" `testProperty` \(AddressInWorld world address) ->
@@ -43,27 +36,3 @@ tests = testGroup "Life"
   , "an Alive cell with 2 or 3 live neighbors lives" `testProperty` \(NeighborList neighbors) ->
       (fate Alive neighbors == Alive) == (length (filter (==Alive) neighbors) `elem` [2,3])
   ]
-
-data AddressInWorld = AddressInWorld World Address deriving (Show)
-data NeighborList = NeighborList [Cell] deriving (Show)
-
-instance Arbitrary World where
-  arbitrary = do
-    width  <- choose (1, 100)
-    height <- choose (1, 100)
-    cells <- vector ((width) * (height))
-    return $ newWorldWithCells (width, height) cells
-
-instance Arbitrary Cell where
-  arbitrary = elements [Alive, Dead]
-
-instance Arbitrary AddressInWorld where
-  arbitrary = do
-    world <- arbitrary
-    let (width, height) = size world
-    x <- choose (0, width - 1)
-    y <- choose (0, height - 1)
-    return $ AddressInWorld world (x, y)
-
-instance Arbitrary NeighborList where
-  arbitrary = liftM NeighborList (vector 8)

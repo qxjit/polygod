@@ -21,6 +21,6 @@ loadPattern filePath = do
   return $ Pattern (concat patternCells)
 
 drawPatternAt :: Address -> Pattern -> World -> World
-drawPatternAt (xOff, yOff) (Pattern updates) world = updateCells world (map offset updates)
+drawPatternAt (xOff, yOff) (Pattern updates) = updateCells (map offset updates)
   where offset ((x, y), cell) = ((x + xOff, y + yOff), cell)
 
