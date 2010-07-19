@@ -19,7 +19,7 @@ jQuery.fn.cellCanvas = function(width, height, options) {
     }
 
     this.worldWidth = width;
-    this.wordHeight = height;
+    this.worldHeight = height;
     this.width =  width * this.cellSize;
     this.height = height * this.cellSize;
 
