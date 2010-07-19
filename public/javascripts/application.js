@@ -1,6 +1,10 @@
 $(window).load(function() {
-  var canvas = $('#game-canvas')[0]
+  $('#game-canvas').each(setupCanvas);
+  $('.toolbar').each(setupToolbar);
+});
 
+function setupCanvas() {
+  var canvas = this;
   var worldWidth = canvas.getAttribute('data-width');
   var worldHeight = canvas.getAttribute('data-height');
 
@@ -50,7 +54,7 @@ $(window).load(function() {
     $.ajax({
       type: 'POST',
       url: 'world',
-      data: JSON.stringify({cells: [ { point: [worldX, worldY], alive: true} ] }),
+      data: JSON.stringify({cells: [ { point: [worldX, worldY], alive: $('input:radio[name=tool]:checked').val() == "resurrect"} ] }),
       cache: false,
       error: function(req, status, error) {
         alert("Ajax error Updating World!");
@@ -60,11 +64,11 @@ $(window).load(function() {
 
   $(canvas).mousedown(function(event) {
     updateWorld(event);
-    $(this).mousemove(updateWorld);
+    $(canvas).mousemove(updateWorld);
   });
 
   $(canvas).mouseup(function(event) {
-    $(this).unbind('mousemove', updateWorld);
+    $(canvas).unbind('mousemove', updateWorld);
   });
 
   setTimeout(function() {
@@ -78,4 +82,8 @@ $(window).load(function() {
       }
     });
   }, 100);
-});
+};
+
+function setupToolbar() {
+  $(this).buttonset();
+};

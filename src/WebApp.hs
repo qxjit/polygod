@@ -78,14 +78,23 @@ rootHandler timeline = do
   blazeTemplate $ html $ do
     H.head $ do
       H.title "Polygod -- A Multiplayer Game Of Life"
-      (script ! type_ "text/javascript" ! src "http://code.jquery.com/jquery-1.4.2.min.js") ""
-      (script ! type_ "text/javascript" ! src "javascripts/application.js") ""
-      (link ! rel "stylesheet" ! type_ "text/css" ! href "stylesheets/application.css")
+      script ! type_ "text/javascript" ! src "http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js" $ ""
+      script ! type_ "text/javascript" ! src "http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.2/jquery-ui.min.js" $ ""
+      script ! type_ "text/javascript" ! src "javascripts/application.js" $ ""
+      link ! rel "stylesheet" ! type_ "text/css" ! href "stylesheets/ui-darkness/jquery-ui-1.8.2.custom.css"
+      link ! rel "stylesheet" ! type_ "text/css" ! href "stylesheets/application.css"
     body $ do
       h1 "Welcome to Polygod"
-      (canvas ! A.id "game-canvas"
-              ! dataAttribute "width" (fromString $ show wWidth)
-              ! dataAttribute "height" (fromString $ show wHeight)) ""
+      H.div ! class_ "toolbar" $ do
+        input ! type_ "radio" ! name "tool" ! A.id "resurrect" ! checked "checked" ! value "resurrect"
+        H.label ! for "resurrect" $ "Resurrect"
+
+        input ! type_ "radio" ! name "tool" ! A.id "smite" ! value "smite"
+        H.label ! for "smite" $ "Smite"
+
+      canvas ! A.id "game-canvas"
+             ! dataAttribute "width" (fromString $ show wWidth)
+             ! dataAttribute "height" (fromString $ show wHeight) $ ""
 
 updateWorldHandler :: Timeline a -> Snap ()
 updateWorldHandler timeline = do
