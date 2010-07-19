@@ -18,6 +18,8 @@ jQuery.fn.cellCanvas = function(width, height, options) {
       this.cellSize =  Math.floor(Math.min(maximumCellWidth, maximumCellHeight));
     }
 
+    this.worldWidth = width;
+    this.wordHeight = height;
     this.width =  width * this.cellSize;
     this.height = height * this.cellSize;
 
@@ -82,7 +84,7 @@ jQuery.fn.gameCanvas = function() {
 
     var updateWorld = function(event) {
       var coords = worldCoordinates( event.pageX, event.pageY );
-      polygod.postCells([ { point: [coords.x, coords.y], alive: $('input:radio[name=tool]:checked').val() == "resurrect"} ]);
+      polygod.postCells(canvasElem, [ { point: [coords.x, coords.y], alive: $('input:radio[name=tool]:checked').val() == "resurrect"} ]);
     };
 
     $(canvasElem).mousedown(function(event) {
@@ -97,6 +99,7 @@ jQuery.fn.gameCanvas = function() {
     $(canvasElem).droppable({
       drop: function(event, ui) {
         polygod.postCells(
+          canvasElem,
           ui.draggable.data('cellsForDrop')(worldCoordinates(ui.offset.left, ui.offset.top))
         );
       }
@@ -138,19 +141,28 @@ jQuery.fn.patternBox = function(cellSize, patterns) {
   });
 
   this.append(list);
-}
+};
+
+jQuery.fn.all = function(predicate) {
+  var answer = true;
+  this.each(function() { answer = answer && predicate.apply(this); });
+  return answer;
+};
 
 var polygod = {
-  postCells: function(cells) {
-    $.ajax({
-      type: 'POST',
-      url: 'world',
-      data: JSON.stringify({cells: cells }),
-      cache: false,
-      error: function(req, status, error) {
-        alert("Ajax error Updating World!");
-      }
-    });
+  postCells: function(canvasElem, cells) {
+    if ($(cells).all(function() { return this.point[0] >= 0 && this.point[0] < canvasElem.worldWidth &&
+                                         this.point[1] >= 0 && this.point[1] < canvasElem.worldHeight; })) {
+      $.ajax({
+        type: 'POST',
+        url: 'world',
+        data: JSON.stringify({cells: cells}),
+        cache: false,
+        error: function(req, status, error) {
+          alert("Ajax error Updating World!");
+        }
+      });
+    }
   },
 
   getWorld: function(successCallback, tick) {
