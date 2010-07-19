@@ -45,6 +45,7 @@ worldAfter oldTick (Timeline tvar _) = atomically $ do
 interfere :: (World -> World) -> Timeline a -> IO ()
 interfere f (Timeline tvar g) = atomically $ do
   (!world, !tick, _) <- readTVar tvar
-  let world' = f world
+  let !world' = f world -- force evaluation of the world now in case f raises any exceptions
       tick' = tick + 1
   writeTVar tvar (world', tick', g world' tick')
+

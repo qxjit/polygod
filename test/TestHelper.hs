@@ -1,14 +1,18 @@
 module TestHelper
   ( module Test.Framework
   , module Test.Framework.Providers.QuickCheck2
+  , module Test.Framework.Providers.HUnit
   , module Test.QuickCheck
+  , module Test.HUnit
   , module ArbitraryInstances
   )
   where
 
 import Test.Framework
 import Test.Framework.Providers.QuickCheck2
+import Test.Framework.Providers.HUnit
 
-import Test.QuickCheck
+import Test.QuickCheck hiding (Testable)
+import Test.HUnit hiding (Test, Testable)
 import ArbitraryInstances
 
