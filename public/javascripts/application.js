@@ -4,10 +4,8 @@ $(window).load(function() {
   var worldWidth = canvas.getAttribute('data-width');
   var worldHeight = canvas.getAttribute('data-height');
 
-  var frame = $(window);
-
-  var maximumCellWidth = frame.width() * 0.8 / worldWidth;
-  var maximumCellHeight = frame.height() * 0.7 / worldHeight;
+  var maximumCellWidth = $(window).width() * 0.8 / worldWidth;
+  var maximumCellHeight = $(window).height() * 0.7 / worldHeight;
 
   var cellSize = Math.floor(Math.min(maximumCellWidth, maximumCellHeight));
 
@@ -15,12 +13,17 @@ $(window).load(function() {
   canvas.height = worldHeight * cellSize;
 
   var context = canvas.getContext('2d');
-  context.fillStyle = "#FF0000";
 
   var repaintWorld = function(world) {
     $(world.cells).each(function(index) {
       var x = this.point[0]*cellSize;
       var y = this.point[1]*cellSize;
+
+      var gradient = context.createLinearGradient(x, y, x + cellSize, y + cellSize);
+      gradient.addColorStop(0, '#FFD859');
+      gradient.addColorStop(1, '#FF0000');
+      context.fillStyle = gradient;
+
       if (this.alive) {
         context.fillRect(x, y, cellSize, cellSize);
       } else {
