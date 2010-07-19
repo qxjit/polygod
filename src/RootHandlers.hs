@@ -36,6 +36,8 @@ rootHandler timeline = do
         input ! type_ "radio" ! name "tool" ! A.id "smite" ! value "smite"
         H.label ! for "smite" $ "Smite"
 
+      H.div ! A.id "pattern-box" $ ""
+
       canvas ! A.id "game-canvas"
              ! dataAttribute "width" (fromString $ show wWidth)
              ! dataAttribute "height" (fromString $ show wHeight) $ ""

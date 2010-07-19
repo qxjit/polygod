@@ -6,3 +6,11 @@ body {
   border: 2px solid blue;
   background: #DDDDDD;
 }
+
+#pattern-box {
+  float: right;
+  width: 20%;
+  margin-right: 2%;
+  height: 100px;
+  background-color: blue;
+}
