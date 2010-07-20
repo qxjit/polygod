@@ -1,8 +1,8 @@
 $(window).load(function() {
-  $('#game-canvas').gameCanvas();
+  $('#game-canvas').masterCanvas();
   $('.toolbar').buttonset();
   $('#pattern-box').patternBox({
-    cellSize: $('#game-canvas').data('cellCanvas').cellSize,
+    masterCanvas: $('#game-canvas').data('masterCanvas'),
     patterns: [
       {size: [3,3], points: [       [1,0],
                                           [2,1],
@@ -22,35 +22,14 @@ $(window).load(function() {
   });
 });
 
-$.widget("ui.cellCanvas", {
-  options: {
-    width: null,
-    height: null,
-    cellSize: null
-  },
-
+$.widget("ui.abstractCellCanvas", {
   _create: function() {
     this.canvasElem = this.element[0];
-
-    if (!this.options.cellSize) {
-      this.cellSize = this.element.width() / this.options.width;
-      $.log("1 Initializing canvas based on element width %d", this.element.width());
-    } else {
-      this.cellSize = this.options.cellSize;
-    }
-
-
-    this.width = this.options.width;
-    this.height = this.options.height;
-    this.canvasElem.width   = this.width * this.cellSize;
-    $.log("2 Initializing canvas based on element width %d", this.element.width());
-    this.canvasElem.height  = this.height * this.cellSize;
-    $.log("3 Initializing canvas based on element width %d", this.element.width());
     this._context = this.canvasElem.getContext('2d');
-
   },
 
   _gradients: {},
+
   paintCell: function(point, alive) {
     var x = point[0]*this.cellSize;
     var y = point[1]*this.cellSize;
@@ -83,25 +62,24 @@ $.widget("ui.cellCanvas", {
   }
 });
 
-
-$.widget("ui.gameCanvas", $.ui.mouse, {
-	widgetEventPrefix: "drag",
-	options: {},
+$.widget("ui.masterCanvas", $.ui.mouse, $.extend({}, $.ui.abstractCellCanvas.prototype, {
   _create: function() {
-    this.canvasElem = this.element[0];
+    $.ui.abstractCellCanvas.prototype._create.apply(this);
+
+    this.width = parseInt(this.canvasElem.getAttribute('data-width'));
+    this.height = parseInt(this.canvasElem.getAttribute('data-height'));
+    this.adjustDimensionsToMatchWidth();
+
     var widget = this;
-    this.element.cellCanvas({ width:  parseInt(this.canvasElem.getAttribute('data-width')),
-                              height: parseInt(this.canvasElem.getAttribute('data-height')) });
+
     this.element.droppable({
       drop: function(event, ui) {
         polygod.postCells(
-          widget.element.data("cellCanvas"),
+          widget,
           ui.draggable.data('cellsForDrop')(widget._worldCoordinates(ui.offset.left, ui.offset.top))
         );
       }
     });
-
-    var widget = this;
 
     setTimeout(function() {
       $.ajax({
@@ -118,12 +96,41 @@ $.widget("ui.gameCanvas", $.ui.mouse, {
     this._mouseInit();
   },
 
+  adjustDimensionsToMatchWidth: function() {
+    if (this.element.width() != this._widthDimensionsWereBasedOn) {
+      var impl = function() {
+        var currentWidth = this.element.width();
+
+        this.cellSize = currentWidth / this.width;
+        this.canvasElem.width  = this.width * this.cellSize;
+        this.canvasElem.height = this.height * this.cellSize;
+
+        this._widthDimensionsWereBasedOn = this.element.width();
+      };
+
+      var widthBeforeAdjustment = this.element.width();
+
+      impl.apply(this);
+
+      // readjust again if setting the height has narrowed our width
+      //  (perhaps by making a scroll bar appear)
+      //
+      if (this.element.width() < widthBeforeAdjustment) {
+        impl.apply(this);
+      }
+
+      $.log("Triggering redimension event");
+      this._trigger('redimension');
+    }
+  },
+
   _repaintWorld:function(world) {
+    this.adjustDimensionsToMatchWidth();
+
     var max = world.cells.length;
-    var cellCanvas = this.element.data("cellCanvas");
     for (var i = 0; i < max; i++) {
       var cell = world.cells[i];
-      cellCanvas.paintCell(cell.point, cell.alive);
+      this.paintCell(cell.point, cell.alive);
     }
 
     var widget = this;
@@ -132,12 +139,15 @@ $.widget("ui.gameCanvas", $.ui.mouse, {
 
   _worldCoordinates:  function(pageX, pageY) {
     var canvasOffset = this.element.offset();
-    var cellSize = this.element.data("cellCanvas").cellSize;
-    var worldX = Math.round( (pageX - canvasOffset.left) / cellSize );
-    var worldY = Math.round( (pageY - canvasOffset.top) / cellSize );
 
-    $.log("Converted page coords (%d, %d) to world coords (%d, %d) using offset (%d, %d) and cellSize %0.2f",
-          pageX, pageY, worldX, worldY, canvasOffset.left, canvasOffset.top, cellSize);
+    var elementWidth = this.element.width();
+    var elementHeight = this.element.height();
+
+    var worldX = Math.round( this.width  * (pageX - canvasOffset.left) / elementWidth  );
+    var worldY = Math.round( this.height * (pageY - canvasOffset.top)  / elementHeight );
+
+    $.log("Converted page coords (%d, %d) to world coords (%d, %d) using offset (%d, %d) and element size (%d, %d)",
+          pageX, pageY, worldX, worldY, canvasOffset.left, canvasOffset.top, elementWidth, elementHeight);
 
     return { x: worldX, y: worldY };
   },
@@ -145,37 +155,62 @@ $.widget("ui.gameCanvas", $.ui.mouse, {
   _updateWorld: function(event) {
     var coords = this._worldCoordinates( event.pageX, event.pageY );
     $.log("Updating world at (%d,%d) in repsonse to event at (%d,%d)", coords.x, coords.y, event.pageX, event.pageY);
-    polygod.postCells(this.element.data("cellCanvas"),
-                      [ { point: [coords.x, coords.y], alive: $('input:radio[name=tool]:checked').val() == "resurrect"} ]);
+    polygod.postCells(this, [ { point: [coords.x, coords.y], alive: $('input:radio[name=tool]:checked').val() == "resurrect"} ]);
   },
 
   _mouseStart: function(event) { this._updateWorld(event); },
   _mouseDrag: function(event) { this._updateWorld(event); }
-});
+}));
+
+$.widget("ui.patternCanvas", $.ui.mouse, $.extend({}, $.ui.abstractCellCanvas.prototype, {
+  options: {
+    pattern: null,
+    masterCanvas: null,
+  },
+
+  _create: function() {
+    $.ui.abstractCellCanvas.prototype._create.apply(this);
+
+    var widget = this;
+    this.element.draggable({ helper: function() { return widget.toImage(); }});
+    this.element.data('cellsForDrop', function(coords) {
+      return $(widget.options.pattern.points).map(function() { return { point: [this[0] + coords.x, this[1] + coords.y], alive: true }}).toArray();
+    });
+
+    this._repaint();
+
+    this.options.masterCanvas.element.bind('abstractcellcanvasredimension', function(event) {
+      $.log('Repainting pattern in response to redimension');
+      widget._repaint();
+    });
+  },
+
+  _repaint: function() {
+    this.cellSize = this.options.masterCanvas.cellSize;
+    this.canvasElem.width  = this.cellSize * this.options.pattern.size[0];
+    this.canvasElem.height = this.cellSize * this.options.pattern.size[1];
+
+    var cellCanvas = this;
+
+    $(this.options.pattern.points).each(function() { cellCanvas.paintCell(this, true)});
+  },
+}));
 
 $.widget("ui.patternBox", {
   options: {
-    cellSize: null,
+    masterCanvas: null,
     patterns: null
   },
 
   _create: function() {
     var box = this.element;
-    var cellSize = this.options.cellSize;
+    var masterCanvas = this.options.masterCanvas;
 
     $(this.options.patterns).each(function() {
       var pattern = this;
       var canvas = $('<canvas/>');
       canvas.addClass('ui-corner-all');
-      canvas.cellCanvas({ width: pattern.size[0], height: pattern.size[1], cellSize: cellSize});
-
-      $(pattern.points).each(function() { canvas.data("cellCanvas").paintCell(this, true)});
-      canvas.draggable({ helper: function() { return canvas.data("cellCanvas").toImage(); }});
-
-      canvas.data('cellsForDrop', function(coords) {
-        return $(pattern.points).map(function() { return { point: [this[0] + coords.x, this[1] + coords.y], alive: true }}).toArray();
-      });
-
+      canvas.patternCanvas({ pattern: pattern, masterCanvas: masterCanvas });
       box.append(canvas);
     });
   }

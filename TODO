@@ -1,9 +1,8 @@
 * Better Ajax Error Handling
-* Setup Snap Handler tests
+** Better Messages / Presentation
+** Better Error Recovery
 
-* Fix _worldCoordinates calculation bugs
-** canvas pixel width changes after setting coordinate space height,
-   invalidating calculation of cell size
+* Setup Snap Handler tests
 
 * Fix chrome tab crashes
 * Give error 400 rather than 500 when cell address outside world is passed
