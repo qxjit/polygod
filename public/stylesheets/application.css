@@ -22,4 +22,8 @@ body {
 
 #pattern-box canvas {
   margin: 0.5em;
+  padding: 5px;
+  border: 2px solid black;
+  vertical-align: middle;
+  background: #d0d0d0;
 }

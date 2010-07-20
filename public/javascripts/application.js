@@ -2,8 +2,20 @@ $(window).load(function() {
   $('#game-canvas').gameCanvas();
   $('.toolbar').buttonset();
   $('#pattern-box').patternBox($('#game-canvas')[0].cellSize, [
-    {size: [3,3], points: [ [1,0],[2,1],[0,2],[1,2],[2,2] ]},
-    {size: [2,3], points: [ [0,0],[0,1],[1,0],[1,1] ]},
+    {size: [3,3], points: [       [1,0],
+                                        [2,1],
+                            [0,2],[1,2],[2,2] ]},
+
+    {size: [2,2], points: [ [0,0],[1,0],
+                            [0,1],[1,1] ]},
+
+    {size: [7,3], points: [       [1,0],
+                                              [3,1],
+                            [0,2],[1,2],            [4,2],[5,2],[6,2] ]},
+
+    {size: [4,3], points: [       [1,0],
+                            [0,1],[1,1],[2,1],
+                            [0,2],      [2,2],[3,2] ]}
   ]);
 });
 
@@ -125,6 +137,7 @@ jQuery.fn.patternBox = function(cellSize, patterns) {
     var pattern = this;
 
     var canvas = $('<canvas/>');
+    canvas.addClass('ui-corner-all');
     var canvasElem = canvas[0];
     var cellCanvas = canvas.cellCanvas(pattern.size[0], pattern.size[1], {cellSize: cellSize});
     $(pattern.points).each(function() { canvasElem.paintCell(this, true)});
