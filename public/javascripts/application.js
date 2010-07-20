@@ -120,8 +120,7 @@ jQuery.fn.gameCanvas = function() {
 };
 
 jQuery.fn.patternBox = function(cellSize, patterns) {
-  var list = $('<ul/>');
-
+  var box = this;
   $(patterns).each(function() {
     var pattern = this;
 
@@ -135,12 +134,8 @@ jQuery.fn.patternBox = function(cellSize, patterns) {
       return $(pattern.points).map(function() { return { point: [this[0] + coords.x, this[1] + coords.y], alive: true }}).toArray();
     });
 
-    var item = $('<li/>');
-    item.append(canvas);
-    list.append(item);
+    box.append(canvas);
   });
-
-  this.append(list);
 };
 
 jQuery.fn.all = function(predicate) {

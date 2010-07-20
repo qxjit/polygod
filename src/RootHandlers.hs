@@ -29,20 +29,23 @@ rootHandler timeline = do
       link ! rel "stylesheet" ! type_ "text/css" ! href "stylesheets/application.css"
 
     body $ do
-      H.div ! class_ "toolbar" $ do
-        input ! type_ "radio" ! name "tool" ! A.id "resurrect" ! checked "checked" ! value "resurrect"
-        H.label ! for "resurrect" $ "Resurrect"
+      H.div ! class_ "app-content" $ do
+        H.div ! class_ "ui-widget-content ui-corner-all app-container" $ do
+          h1 ! class_ "ui-widget-header ui-corner-all" $ "Polygod"
+          canvas ! A.id "game-canvas"
+                 ! dataAttribute "width" (fromString $ show wWidth)
+                 ! dataAttribute "height" (fromString $ show wHeight) $ ""
 
-        input ! type_ "radio" ! name "tool" ! A.id "smite" ! value "smite"
-        H.label ! for "smite" $ "Smite"
+        H.div ! class_ "ui-widget-content ui-corner-all" $ do
+          H.div ! class_ "toolbar" $ do
+            input ! type_ "radio" ! name "tool" ! A.id "resurrect" ! checked "checked" ! value "resurrect"
+            H.label ! for "resurrect" $ "Resurrect"
 
-      H.div ! A.id "pattern-box" $ ""
+            input ! type_ "radio" ! name "tool" ! A.id "smite" ! value "smite"
+            H.label ! for "smite" $ "Smite"
 
-      H.div ! class_ "ui-widget-content ui-corner-all app-container" $ do
-        h1 ! class_ "ui-widget-header ui-corner-all" $ "Polygod"
-        canvas ! A.id "game-canvas"
-               ! dataAttribute "width" (fromString $ show wWidth)
-               ! dataAttribute "height" (fromString $ show wHeight) $ ""
+          H.div ! A.id "pattern-box" $ ""
+
 
 blazeTemplate :: Html a -> Snap ()
 blazeTemplate = writeLBS . renderHtml

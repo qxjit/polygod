@@ -2,9 +2,13 @@ body {
   text-align: center;
 }
 
+.app-content {
+  width: 80%;
+  margin: 2em auto;
+}
+
 .app-container {
-  width: 70%;
-  margin: 5%;
+  margin: 0.5em auto;
 }
 
 .app-container h1 {
@@ -16,10 +20,6 @@ body {
   border: 0;
 }
 
-#pattern-box {
-  float: right;
-  width: 20%;
-  margin-right: 2%;
-  height: 100px;
-  background-color: blue;
+#pattern-box canvas {
+  margin: 0.5em;
 }
