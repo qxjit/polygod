@@ -1,155 +1,185 @@
 $(window).load(function() {
   $('#game-canvas').gameCanvas();
   $('.toolbar').buttonset();
-  $('#pattern-box').patternBox($('#game-canvas')[0].cellSize, [
-    {size: [3,3], points: [       [1,0],
-                                        [2,1],
-                            [0,2],[1,2],[2,2] ]},
+  $('#pattern-box').patternBox({
+    cellSize: $('#game-canvas').data('cellCanvas').cellSize,
+    patterns: [
+      {size: [3,3], points: [       [1,0],
+                                          [2,1],
+                              [0,2],[1,2],[2,2] ]},
 
-    {size: [2,2], points: [ [0,0],[1,0],
-                            [0,1],[1,1] ]},
+      {size: [2,2], points: [ [0,0],[1,0],
+                              [0,1],[1,1] ]},
 
-    {size: [7,3], points: [       [1,0],
-                                              [3,1],
-                            [0,2],[1,2],            [4,2],[5,2],[6,2] ]},
+      {size: [7,3], points: [       [1,0],
+                                                [3,1],
+                              [0,2],[1,2],            [4,2],[5,2],[6,2] ]},
 
-    {size: [4,3], points: [       [1,0],
-                            [0,1],[1,1],[2,1],
-                            [0,2],      [2,2],[3,2] ]}
-  ]);
+      {size: [4,3], points: [       [1,0],
+                              [0,1],[1,1],[2,1],
+                              [0,2],      [2,2],[3,2] ]}
+    ]
+  });
 });
 
-jQuery.fn.cellCanvas = function(width, height, options) {
-  this.each(function() {
-    if (options && options.cellSize) {
-      this.cellSize = options.cellSize;
+$.widget("ui.cellCanvas", {
+  options: {
+    width: null,
+    height: null,
+    cellSize: null
+  },
+
+  _create: function() {
+    this.canvasElem = this.element[0];
+
+    if (!this.options.cellSize) {
+      this.cellSize = this.element.width() / this.options.width;
+      $.log("1 Initializing canvas based on element width %d", this.element.width());
     } else {
-      this.cellSize =  $(this).width() / width;
+      this.cellSize = this.options.cellSize;
     }
 
-    this.worldWidth = width;
-    this.worldHeight = height;
-    this.width =  width * this.cellSize;
-    this.height = height * this.cellSize;
 
-    var context = this.getContext('2d');
-    var gradients = {};
+    this.width = this.options.width;
+    this.height = this.options.height;
+    this.canvasElem.width   = this.width * this.cellSize;
+    $.log("2 Initializing canvas based on element width %d", this.element.width());
+    this.canvasElem.height  = this.height * this.cellSize;
+    $.log("3 Initializing canvas based on element width %d", this.element.width());
+    this._context = this.canvasElem.getContext('2d');
 
-    this.paintCell = function(point, alive) {
-      var x = point[0]*this.cellSize;
-      var y = point[1]*this.cellSize;
+  },
 
-      if (!gradients[x]) {
-        gradients[x] = {};
-      }
+  _gradients: {},
+  paintCell: function(point, alive) {
+    var x = point[0]*this.cellSize;
+    var y = point[1]*this.cellSize;
 
-      var gradient;
-      if (gradients[x][y]) {
-        gradient = gradients[x][y];
-      } else {
-        gradient = gradients[x][y] = context.createLinearGradient(x, y, x + this.cellSize, y + this.cellSize);
-        gradient.addColorStop(0, '#FFD859');
-        gradient.addColorStop(1, '#FF0000');
-      }
+    if (!this._gradients[x]) {
+      this._gradients[x] = {};
+    }
 
-      if (alive) {
-        context.fillStyle = gradient;
-        context.fillRect(x, y, this.cellSize, this.cellSize);
-      } else {
-        context.clearRect(x, y, this.cellSize, this.cellSize);
-      }
-    };
+    var gradient;
+    if (this._gradients[x][y]) {
+      gradient = this._gradients[x][y];
+    } else {
+      gradient = this._gradients[x][y] = this._context.createLinearGradient(x, y, x + this.cellSize, y + this.cellSize);
+      gradient.addColorStop(0, '#FFD859');
+      gradient.addColorStop(1, '#FF0000');
+    }
 
-    this.toImage = function() {
-      var img = $('<img/>');
-      img.attr('src', this.toDataURL());
-      return img;
-    };
-  });
-};
+    if (alive) {
+      this._context.fillStyle = gradient;
+      this._context.fillRect(x, y, this.cellSize, this.cellSize);
+    } else {
+      this._context.clearRect(x, y, this.cellSize, this.cellSize);
+    }
+  },
 
-jQuery.fn.gameCanvas = function() {
-  this.each(function() {
-    $(this).cellCanvas(parseInt(this.getAttribute('data-width')), parseInt(this.getAttribute('data-height')));
-    var canvasElem = this;
-    var repaintWorld = function(world) {
-      var max = world.cells.length;
-      for (var i = 0; i < max; i++) {
-        var cell = world.cells[i];
-        canvasElem.paintCell(cell.point, cell.alive);
-      }
+  toImage: function() {
+    var img = $('<img/>');
+    img.attr('src', this.canvasElem.toDataURL());
+    return img;
+  }
+});
 
-      polygod.getWorld(repaintWorld, world.tick);
-    };
 
-    var worldCoordinates = function(pageX, pageY) {
-      var canvasOffset = $(canvasElem).offset();
-      var worldX = Math.round( (pageX - canvasOffset.left) / canvasElem.cellSize);
-      var worldY = Math.round( (pageY - canvasOffset.top) / canvasElem.cellSize);
-
-      $.log("Converted page coords (%d, %d) to world coords (%d, %d) using offset (%d, %d) and cellSize %d",
-            pageX, pageY, worldX, worldY, canvasOffset.left, canvasOffset.top, canvasElem.cellSize);
-
-      return { x: worldX, y: worldY };
-    };
-
-    var updateWorld = function(event) {
-      var coords = worldCoordinates( event.pageX, event.pageY );
-      $.log("Updating world at (%d,%d) in repsonse to event at (%d,%d)", coords.x, coords.y, event.pageX, event.pageY);
-      polygod.postCells(canvasElem, [ { point: [coords.x, coords.y], alive: $('input:radio[name=tool]:checked').val() == "resurrect"} ]);
-    };
-
-    $(canvasElem).mousedown(function(event) {
-      updateWorld(event);
-      $(canvasElem).mousemove(updateWorld);
-    });
-
-    $(canvasElem).mouseup(function(event) {
-      $(canvasElem).unbind('mousemove', updateWorld);
-    });
-
-    $(canvasElem).droppable({
+$.widget("ui.gameCanvas", $.ui.mouse, {
+	widgetEventPrefix: "drag",
+	options: {},
+  _create: function() {
+    this.canvasElem = this.element[0];
+    var widget = this;
+    this.element.cellCanvas({ width:  parseInt(this.canvasElem.getAttribute('data-width')),
+                              height: parseInt(this.canvasElem.getAttribute('data-height')) });
+    this.element.droppable({
       drop: function(event, ui) {
         polygod.postCells(
-          canvasElem,
-          ui.draggable.data('cellsForDrop')(worldCoordinates(ui.offset.left, ui.offset.top))
+          widget.element.data("cellCanvas"),
+          ui.draggable.data('cellsForDrop')(widget._worldCoordinates(ui.offset.left, ui.offset.top))
         );
       }
     });
+
+    var widget = this;
 
     setTimeout(function() {
       $.ajax({
         url: 'world/current.json',
         dataType: 'json',
-        success: repaintWorld,
+        success: function(world) { widget._repaintWorld(world); },
         cache: false,
         error: function(req, status, error) {
           alert("Ajax error Loading World!");
         }
       });
     }, 100);
-  });
-};
 
-jQuery.fn.patternBox = function(cellSize, patterns) {
-  var box = this;
-  $(patterns).each(function() {
-    var pattern = this;
+    this._mouseInit();
+  },
 
-    var canvas = $('<canvas/>');
-    canvas.addClass('ui-corner-all');
-    var canvasElem = canvas[0];
-    var cellCanvas = canvas.cellCanvas(pattern.size[0], pattern.size[1], {cellSize: cellSize});
-    $(pattern.points).each(function() { canvasElem.paintCell(this, true)});
+  _repaintWorld:function(world) {
+    var max = world.cells.length;
+    var cellCanvas = this.element.data("cellCanvas");
+    for (var i = 0; i < max; i++) {
+      var cell = world.cells[i];
+      cellCanvas.paintCell(cell.point, cell.alive);
+    }
 
-    $(canvas).draggable({ helper: function() { return canvasElem.toImage(); }});
-    $(canvas).data('cellsForDrop', function(coords) {
-      return $(pattern.points).map(function() { return { point: [this[0] + coords.x, this[1] + coords.y], alive: true }}).toArray();
+    var widget = this;
+    polygod.getWorld(function(world) { widget._repaintWorld(world) }, world.tick);
+  },
+
+  _worldCoordinates:  function(pageX, pageY) {
+    var canvasOffset = this.element.offset();
+    var cellSize = this.element.data("cellCanvas").cellSize;
+    var worldX = Math.round( (pageX - canvasOffset.left) / cellSize );
+    var worldY = Math.round( (pageY - canvasOffset.top) / cellSize );
+
+    $.log("Converted page coords (%d, %d) to world coords (%d, %d) using offset (%d, %d) and cellSize %0.2f",
+          pageX, pageY, worldX, worldY, canvasOffset.left, canvasOffset.top, cellSize);
+
+    return { x: worldX, y: worldY };
+  },
+
+  _updateWorld: function(event) {
+    var coords = this._worldCoordinates( event.pageX, event.pageY );
+    $.log("Updating world at (%d,%d) in repsonse to event at (%d,%d)", coords.x, coords.y, event.pageX, event.pageY);
+    polygod.postCells(this.element.data("cellCanvas"),
+                      [ { point: [coords.x, coords.y], alive: $('input:radio[name=tool]:checked').val() == "resurrect"} ]);
+  },
+
+  _mouseStart: function(event) { this._updateWorld(event); },
+  _mouseDrag: function(event) { this._updateWorld(event); }
+});
+
+$.widget("ui.patternBox", {
+  options: {
+    cellSize: null,
+    patterns: null
+  },
+
+  _create: function() {
+    var box = this.element;
+    var cellSize = this.options.cellSize;
+
+    $(this.options.patterns).each(function() {
+      var pattern = this;
+      var canvas = $('<canvas/>');
+      canvas.addClass('ui-corner-all');
+      canvas.cellCanvas({ width: pattern.size[0], height: pattern.size[1], cellSize: cellSize});
+
+      $(pattern.points).each(function() { canvas.data("cellCanvas").paintCell(this, true)});
+      canvas.draggable({ helper: function() { return canvas.data("cellCanvas").toImage(); }});
+
+      canvas.data('cellsForDrop', function(coords) {
+        return $(pattern.points).map(function() { return { point: [this[0] + coords.x, this[1] + coords.y], alive: true }}).toArray();
+      });
+
+      box.append(canvas);
     });
-
-    box.append(canvas);
-  });
-};
+  }
+});
 
 jQuery.fn.all = function(predicate) {
   var answer = true;
@@ -158,10 +188,10 @@ jQuery.fn.all = function(predicate) {
 };
 
 var polygod = {
-  postCells: function(canvasElem, cells) {
-    if ($(cells).all(function() { return this.point[0] >= 0 && this.point[0] < canvasElem.worldWidth &&
-                                         this.point[1] >= 0 && this.point[1] < canvasElem.worldHeight; })) {
-      $.log("Posting %d cells to world with dimension (%d, %d)", cells.length, canvasElem.worldWidth, canvasElem.worldHeight)
+  postCells: function(cellCanvas, cells) {
+    if ($(cells).all(function() { return this.point[0] >= 0 && this.point[0] < cellCanvas.width &&
+                                         this.point[1] >= 0 && this.point[1] < cellCanvas.height; })) {
+      $.log("Posting %d cells to world with dimension (%d, %d)", cells.length, cellCanvas.width, cellCanvas.height)
       $.ajax({
         type: 'POST',
         url: 'world',
@@ -172,7 +202,7 @@ var polygod = {
         }
       });
     } else {
-      $.log("Not posting %d cells because some where off world, dimenion (%d, %d)", cells.length, canvasElem.worldWidth, canvasElem.worldHeight);
+      $.log("Not posting %d cells because some where off world, dimenion (%d, %d)", cells.length, cellCanvas.width, cellCanvas.height);
     }
   },
 
