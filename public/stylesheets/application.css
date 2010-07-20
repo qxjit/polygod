@@ -2,9 +2,18 @@ body {
   text-align: center;
 }
 
+.app-container {
+  width: 70%;
+  margin: 5%;
+}
+
+.app-container h1 {
+  margin: 0.1em;
+}
+
 #game-canvas {
-  border: 2px solid blue;
-  background: #DDDDDD;
+  width: 100%;
+  border: 0;
 }
 
 #pattern-box {

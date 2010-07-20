@@ -12,10 +12,7 @@ jQuery.fn.cellCanvas = function(width, height, options) {
     if (options && options.cellSize) {
       this.cellSize = options.cellSize;
     } else {
-      var maximumCellWidth = $(window).width() * 0.7 / width;
-      var maximumCellHeight = $(window).height() * 0.7 / height;
-
-      this.cellSize =  Math.floor(Math.min(maximumCellWidth, maximumCellHeight));
+      this.cellSize =  $(this).width() / width;
     }
 
     this.worldWidth = width;
@@ -61,7 +58,7 @@ jQuery.fn.cellCanvas = function(width, height, options) {
 
 jQuery.fn.gameCanvas = function() {
   this.each(function() {
-    $(this).cellCanvas(this.getAttribute('data-width'), this.getAttribute('data-height'));
+    $(this).cellCanvas(parseInt(this.getAttribute('data-width')), parseInt(this.getAttribute('data-height')));
     var canvasElem = this;
     var repaintWorld = function(world) {
       var max = world.cells.length;
@@ -73,17 +70,20 @@ jQuery.fn.gameCanvas = function() {
       polygod.getWorld(repaintWorld, world.tick);
     };
 
-    var worldCoordinates = function(x, y) {
+    var worldCoordinates = function(pageX, pageY) {
       var canvasOffset = $(canvasElem).offset();
-      return {
-        x: Math.floor( (x - canvasOffset.left) / canvasElem.cellSize),
-        y: Math.floor( (y - canvasOffset.top) / canvasElem.cellSize)
-      }
+      var worldX = Math.round( (pageX - canvasOffset.left) / canvasElem.cellSize);
+      var worldY = Math.round( (pageY - canvasOffset.top) / canvasElem.cellSize);
 
+      $.log("Converted page coords (%d, %d) to world coords (%d, %d) using offset (%d, %d) and cellSize %d",
+            pageX, pageY, worldX, worldY, canvasOffset.left, canvasOffset.top, canvasElem.cellSize);
+
+      return { x: worldX, y: worldY };
     };
 
     var updateWorld = function(event) {
       var coords = worldCoordinates( event.pageX, event.pageY );
+      $.log("Updating world at (%d,%d) in repsonse to event at (%d,%d)", coords.x, coords.y, event.pageX, event.pageY);
       polygod.postCells(canvasElem, [ { point: [coords.x, coords.y], alive: $('input:radio[name=tool]:checked').val() == "resurrect"} ]);
     };
 
@@ -153,6 +153,7 @@ var polygod = {
   postCells: function(canvasElem, cells) {
     if ($(cells).all(function() { return this.point[0] >= 0 && this.point[0] < canvasElem.worldWidth &&
                                          this.point[1] >= 0 && this.point[1] < canvasElem.worldHeight; })) {
+      $.log("Posting %d cells to world with dimension (%d, %d)", cells.length, canvasElem.worldWidth, canvasElem.worldHeight)
       $.ajax({
         type: 'POST',
         url: 'world',
@@ -162,6 +163,8 @@ var polygod = {
           alert("Ajax error Updating World!");
         }
       });
+    } else {
+      $.log("Not posting %d cells because some where off world, dimenion (%d, %d)", cells.length, canvasElem.worldWidth, canvasElem.worldHeight);
     }
   },
 
