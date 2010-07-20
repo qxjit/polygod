@@ -82,15 +82,8 @@ $.widget("ui.masterCanvas", $.ui.mouse, $.extend({}, $.ui.abstractCellCanvas.pro
     });
 
     setTimeout(function() {
-      $.ajax({
-        url: 'world/current.json',
-        dataType: 'json',
-        success: function(world) { widget._repaintWorld(world); },
-        cache: false,
-        error: function(req, status, error) {
-          alert("Ajax error Loading World!");
-        }
-      });
+      polygod.getWorld(widget.canvasElem.getAttribute('data-startUrl'),
+                       function(world) { widget._repaintWorld(world); });
     }, 100);
 
     this._mouseInit();
@@ -134,7 +127,7 @@ $.widget("ui.masterCanvas", $.ui.mouse, $.extend({}, $.ui.abstractCellCanvas.pro
     }
 
     var widget = this;
-    polygod.getWorld(function(world) { widget._repaintWorld(world) }, world.tick);
+    polygod.getWorld(world.nextUrl, function(world) { widget._repaintWorld(world); });
   },
 
   _worldCoordinates:  function(pageX, pageY) {
@@ -241,9 +234,9 @@ var polygod = {
     }
   },
 
-  getWorld: function(successCallback, tick) {
+  getWorld: function(url, successCallback) {
     $.ajax({
-      url: 'world/next.json?tick=' + tick,
+      url: url,
       dataType: 'json',
       success: successCallback,
       cache: false,

@@ -1,6 +1,7 @@
 module WebApp where
 
 import           Control.Applicative
+import           Data.ByteString.Char8 (pack, append)
 
 import           Snap.Types
 import           Snap.Util.FileServe
@@ -45,6 +46,6 @@ jsonTemplate = writeBS . encode Compact
 
 worldView :: World -> Tick -> JSON
 worldView world tick = let (Object trie) = worldToJson world
-                       in Object $ add trie "tick" (Number $ fromIntegral tick)
+                       in Object $ add trie "nextUrl" (String $ "/world/next.json?tick=" `append` (pack $ show tick))
 
 
