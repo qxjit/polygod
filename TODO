@@ -2,6 +2,8 @@
 ** Better Messages / Presentation
 ** Better Error Recovery
 
+* Revamp resurrect / smite toolbar
+
 * Setup Snap Handler tests
 
 * Fix chrome tab crashes
@@ -15,3 +17,6 @@
 * Investigate refactoring canvas display to use 1 "thread" to paint and 1 "thread" to query server
 ** "thread" = series of calls to same function using setTimeout (see _repaintWorld)
 
+* Number of concurrent users displayed
+
+* Multiple colors of cells based on user?
