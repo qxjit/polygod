@@ -38,7 +38,8 @@ Executable polygod
     time >= 1.1.4 && < 2,
     containers,
     MonadCatchIO-transformers,
-    filepath >= 1.1 && <1.2
+    filepath >= 1.1 && < 1.2,
+    iteratee >= 0.3.5 && < 0.4
 
   extensions: BangPatterns, OverloadedStrings
 

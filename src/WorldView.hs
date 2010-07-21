@@ -1,5 +1,7 @@
 module WorldView
-  (worldView)
+  ( worldView
+  , SharedTimelineView
+  )
   where
 
 import           Control.Monad.Trans (liftIO)
@@ -13,7 +15,9 @@ import           Life
 import           Life.JSON
 import           Timeline
 
-worldView :: World -> Tick -> UserToken -> UserSet -> Snap ()
+type SharedTimelineView = UserToken -> UserSet -> Snap ()
+
+worldView :: World -> Tick -> SharedTimelineView
 worldView world tick userToken userSet = do
   count <- liftIO (userCount userSet)
   jsonTemplate $ worldViewJson world tick userToken count

@@ -21,18 +21,23 @@ worldWidth, worldHeight :: Dimension
 
 main :: IO ()
 main = do
-  timeline <- newTimeline (worldWidth, worldHeight) worldView
+  timeline <- newAppTimeline
   users <- newUserSet
 
   gliderGunPattern <- loadPattern "gospersGliderGun.txt"
   interfere (drawPatternAt (0, 0) gliderGunPattern) timeline
-  quickServer $
-        ifTop (rootHandler timeline) <|>
-        noCache (route [ ("world/current.json", worldHandler users timeline)
-                       , ("world/next.json", nextWorldHandler users timeline)
-                       , ("world", updateWorldHandler timeline)
-                       ]) <|>
-        fileServe "public"
+  quickServer $ site timeline users
+
+newAppTimeline :: IO (Timeline SharedTimelineView)
+newAppTimeline = newTimeline (worldWidth, worldHeight) worldView
+
+site :: Timeline SharedTimelineView -> UserSet -> Snap ()
+site timeline users = ifTop (rootHandler timeline) <|>
+                      noCache (route [ ("world/current.json", worldHandler users timeline)
+                                     , ("world/next.json", nextWorldHandler users timeline)
+                                     , ("world", updateWorldHandler timeline)
+                                     ]) <|>
+                      fileServe "public"
 
 noCache :: Snap () -> Snap ()
 noCache handler = do

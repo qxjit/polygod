@@ -14,6 +14,7 @@ import           Life.JSON
 import           Timeline
 import           Util
 import           ConcurrentUsers
+import           WorldView
 
 updateWorldHandler :: Timeline a -> Snap ()
 updateWorldHandler timeline = do
@@ -32,13 +33,13 @@ generateNewUserToken userSet = do
   newUser <- liftIO (trackNewUser userSet)
   maybe (error500 "Failed to generate UUID" >> undefined) return newUser
 
-worldHandler :: UserSet -> Timeline (UserToken -> UserSet -> Snap ()) -> Snap ()
+worldHandler :: UserSet -> Timeline SharedTimelineView -> Snap ()
 worldHandler userSet timeline = do
   user <- generateNewUserToken userSet
   (_, _, renderWorldJson) <- liftIO (now timeline)
   renderWorldJson user userSet
 
-nextWorldHandler :: UserSet -> Timeline (UserToken -> UserSet -> Snap ()) -> Snap ()
+nextWorldHandler :: UserSet -> Timeline SharedTimelineView -> Snap ()
 nextWorldHandler userSet timeline = do
     userTokenParam <- getParam "u"
     user <- maybe (generateNewUserToken userSet)
