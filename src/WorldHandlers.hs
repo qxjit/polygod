@@ -3,6 +3,7 @@ module WorldHandlers where
 import           Control.Monad.Trans (liftIO)
 import qualified Data.ByteString as Strict
 import           Data.Char
+import           Data.Time.Clock
 import           Numeric
 
 import qualified Text.JSONb as Json
@@ -31,24 +32,28 @@ generateNewUserToken userSet = do
   newUser <- liftIO (trackNewUser userSet)
   maybe (error500 "Failed to generate UUID" >> undefined) return newUser
 
-worldHandler :: UserSet -> Timeline (UserToken -> Snap ()) -> Snap ()
+worldHandler :: UserSet -> Timeline (UserToken -> UserSet -> Snap ()) -> Snap ()
 worldHandler userSet timeline = do
   user <- generateNewUserToken userSet
   (_, _, renderWorldJson) <- liftIO (now timeline)
-  renderWorldJson user
+  renderWorldJson user userSet
 
-nextWorldHandler :: UserSet -> Timeline (UserToken -> Snap ()) -> Snap ()
+nextWorldHandler :: UserSet -> Timeline (UserToken -> UserSet -> Snap ()) -> Snap ()
 nextWorldHandler userSet timeline = do
     userTokenParam <- getParam "u"
     user <- maybe (generateNewUserToken userSet)
                   (\s -> processInput (tokenFromString s) "Malformed user token passed")
                   userTokenParam
+
+    liftIO (trackUser user userSet)
+    liftIO (reapStaleUsers (secondsToDiffTime 15) userSet)
+
     tickParam <- getParam "tick"
 
     maybe pass (\tickString ->
                     case readDec (map (chr . fromIntegral) (Strict.unpack tickString)) of
                       [(tick, [])] -> do (_, _, renderWorldJson) <- liftIO (worldAfter tick timeline)
-                                         renderWorldJson user
+                                         renderWorldJson user userSet
                       _ -> pass)
           tickParam
 

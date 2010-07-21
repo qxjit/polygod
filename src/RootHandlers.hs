@@ -46,7 +46,9 @@ rootHandler timeline = do
             H.label ! for "smite" $ "Smite"
 
           H.div ! A.id "pattern-box" $ ""
-
+          H.div ! class_ "concurrentUsersDisplay" $ do
+            "Concurrent Users: "
+            H.span ! class_ "concurrentUsersCount" $ ""
 
 blazeTemplate :: Html a -> Snap ()
 blazeTemplate = writeLBS . renderHtml

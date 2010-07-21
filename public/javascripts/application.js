@@ -126,6 +126,8 @@ $.widget("ui.masterCanvas", $.ui.mouse, $.extend({}, $.ui.abstractCellCanvas.pro
       this.paintCell(cell.point, cell.alive);
     }
 
+    $('.concurrentUsersCount').html(world.userCount);
+
     var widget = this;
     polygod.getWorld(world.nextUrl, function(world) { widget._repaintWorld(world); });
   },
