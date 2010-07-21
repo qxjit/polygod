@@ -27,6 +27,7 @@ Executable polygod
     blaze-html >= 0.1.2 && < 0.2,
     JSONb >= 1.0.2 && < 1.1,
     bytestring-trie >= 0.1.4 && < 0.2,
+    uuid >= 1.2.1 && < 2,
     test-framework >= 0.3.2 && < 0.4,
     test-framework-quickcheck2 >= 0.2.6 && < 0.3,
     test-framework-hunit >= 0.2.6 && < 0.3,
@@ -34,6 +35,7 @@ Executable polygod
     HUnit >= 1.2 && < 3,
     unix,
     text,
+    time >= 1.1.4 && < 2,
     containers,
     MonadCatchIO-transformers,
     filepath >= 1.1 && <1.2

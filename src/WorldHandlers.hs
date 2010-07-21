@@ -2,7 +2,6 @@ module WorldHandlers where
 
 import           Control.Monad.Trans (liftIO)
 import qualified Data.ByteString as Strict
-import qualified Data.ByteString.Lazy as Lazy
 import           Data.Char
 import           Numeric
 
@@ -12,43 +11,64 @@ import           Snap.Types
 import           Life
 import           Life.JSON
 import           Timeline
+import           Util
+import           ConcurrentUsers
 
 updateWorldHandler :: Timeline a -> Snap ()
 updateWorldHandler timeline = do
   body <- getRequestBody
-  processInput (Json.decode (Strict.concat . Lazy.toChunks $ body))
-               "The post data was not valid JSON.  Please use JSON format to post updates to the world.\n" $
+  json <- processInput (Json.decode (strict body))
+              "The post data was not valid JSON.  Please use JSON format to post updates to the world."
 
-    \json -> processInput (jsonToCells json) "The JSON you posted didn't include any properly structured cell data.\n" $
+  newCells <- processInput (jsonToCells json)
+               "The JSON you posted didn't include any properly structured cell data."
 
-      \newCells -> do liftIO $ interfere (updateCells newCells) timeline
-                      writeBS "Divine intervention successful.  Happy godding!\n"
+  liftIO $ interfere (updateCells newCells) timeline
+  writeBS "Divine intervention successful.  Happy godding!\n"
 
-worldHandler :: Timeline (Snap ()) -> Snap ()
-worldHandler timeline =  do
-  (_, _, renderedJSON) <- liftIO (now timeline)
-  renderedJSON
+generateNewUserToken :: UserSet -> Snap UserToken
+generateNewUserToken userSet = do
+  newUser <- liftIO (trackNewUser userSet)
+  maybe (error500 "Failed to generate UUID" >> undefined) return newUser
 
-nextWorldHandler :: Timeline (Snap ()) -> Snap ()
-nextWorldHandler timeline = do
-  tickParam <- getParam "tick"
-  maybe pass (\tickString ->
-                  case readDec (map (chr . fromIntegral) (Strict.unpack tickString)) of
-                    [(tick, [])] -> do (_, _, renderedJSON) <- liftIO (worldAfter tick timeline)
-                                       renderedJSON
-                    _ -> pass)
-        tickParam
+worldHandler :: UserSet -> Timeline (UserToken -> Snap ()) -> Snap ()
+worldHandler userSet timeline = do
+  user <- generateNewUserToken userSet
+  (_, _, renderWorldJson) <- liftIO (now timeline)
+  renderWorldJson user
+
+nextWorldHandler :: UserSet -> Timeline (UserToken -> Snap ()) -> Snap ()
+nextWorldHandler userSet timeline = do
+    userTokenParam <- getParam "u"
+    user <- maybe (generateNewUserToken userSet)
+                  (\s -> processInput (tokenFromString s) "Malformed user token passed")
+                  userTokenParam
+    tickParam <- getParam "tick"
+
+    maybe pass (\tickString ->
+                    case readDec (map (chr . fromIntegral) (Strict.unpack tickString)) of
+                      [(tick, [])] -> do (_, _, renderWorldJson) <- liftIO (worldAfter tick timeline)
+                                         renderWorldJson user
+                      _ -> pass)
+          tickParam
 
 badRequest :: Strict.ByteString -> Snap ()
-badRequest message = do
-        putResponse $
-          setResponseStatus 400 "Bad Request" emptyResponse
-        writeBS message
-        r <- getResponse
-        finishWith r
+badRequest = httpError 400 "Bad Request"
 
-processInput :: PossibleBadInput m => m b -> Strict.ByteString -> (b -> Snap()) -> Snap ()
-processInput input message action = useGoodInput input action (badRequest message)
+error500 :: Strict.ByteString -> Snap ()
+error500 = httpError 500 "Internal Server Error"
+
+httpError :: Int -> Strict.ByteString -> Strict.ByteString -> Snap ()
+httpError code description message = do
+  putResponse $
+    setResponseStatus code description emptyResponse
+  writeBS message
+  writeBS "\n"
+  r <- getResponse
+  finishWith r
+
+processInput :: PossibleBadInput m => m b -> Strict.ByteString -> Snap b
+processInput input message = useGoodInput input return (badRequest message >> undefined)
 
 class PossibleBadInput m where
   useGoodInput :: m a -> (a -> b) -> b -> b
