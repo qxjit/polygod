@@ -18,6 +18,14 @@
 
 -- OTHER IDEAS (EITHER R1 OR AFTER) --
 
+* Pimp Stats Section
+** Requests / Second (current, max)
+** ms / request (rendering time only, not waiting for new world)
+** Memory Usage (just max? Current may be misleading if GHC doesn't release heap after peaks)
+
+* Access to a larger world that user sees only a part of at any given time?
+** impact on shared json rendering between concurrent requests
+
 * Multiple colors of cells based on user?
 
 * Revamp patterns definitions so we don't have write out coordinates
