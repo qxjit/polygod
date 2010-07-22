@@ -3,6 +3,7 @@ module Timeline
   , Tick
   , newTimeline
   , stopTimeline
+  , withTimeline
   , now
   , worldAfter
   , interfere
@@ -10,6 +11,7 @@ module Timeline
   where
 
 import Control.Monad
+import Control.Exception
 import Control.Concurrent
 import Control.Concurrent.STM
 
@@ -42,6 +44,9 @@ newTimeline addr f = do
 
 stopTimeline :: Timeline a -> IO ()
 stopTimeline = killThread . tlThreadId
+
+withTimeline :: Address -> (World -> Tick -> a) -> (Timeline a -> IO b) -> IO b
+withTimeline addr f action = bracket (newTimeline addr f) stopTimeline action
 
 now :: Timeline a -> IO (World, Tick, a)
 now = readTVarIO . tlTVar

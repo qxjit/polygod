@@ -21,15 +21,15 @@ worldWidth, worldHeight :: Dimension
 
 main :: IO ()
 main = do
-  timeline <- newAppTimeline
-  users <- newUserSet
+  withAppTimeline $ \timeline -> do
+    users <- newUserSet
 
-  gliderGunPattern <- loadPattern "gospersGliderGun.txt"
-  interfere (drawPatternAt (0, 0) gliderGunPattern) timeline
-  quickServer $ site timeline users
+    gliderGunPattern <- loadPattern "gospersGliderGun.txt"
+    interfere (drawPatternAt (0, 0) gliderGunPattern) timeline
+    quickServer $ site timeline users
 
-newAppTimeline :: IO (Timeline SharedTimelineView)
-newAppTimeline = newTimeline (worldWidth, worldHeight) sharedWorldView
+withAppTimeline :: (Timeline SharedTimelineView -> IO a) -> IO a
+withAppTimeline = withTimeline (worldWidth, worldHeight) sharedWorldView
 
 site :: Timeline SharedTimelineView -> UserSet -> Snap ()
 site timeline users = ifTop (rootHandler timeline) <|>

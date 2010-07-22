@@ -18,23 +18,20 @@ import           Snap.Internal.Http.Types
 
 import           ConcurrentUsers
 import           WebApp
-import           Timeline
 
 tests :: Test
 tests = testGroup "WebApp" [
   "renders valid json" `testCase` do
-    timeline <- newAppTimeline
-    users <- newUserSet
-    body <- request (site timeline users) GET "/world/next.json" [("tick", "1")]
-    assertBool "Expected response to be parseable json" (either (const False) (const True) $ decode body)
+    withAppTimeline $ \timeline -> do
+      users <- newUserSet
+      body <- request (site timeline users) GET "/world/next.json" [("tick", "1")]
+      assertBool "Expected response to be parseable json" (either (const False) (const True) $ decode body)
 
  ,"a significant percentage of the work is shared between concurrent requests" `testCase` do
     let concurrentThreads = [1,2,5,10,20]
-        timeSite n = do !timeline <- newAppTimeline
+        timeSite n = withAppTimeline $ \timeline -> do
                         !users <- newUserSet
-                        time <- timeConcurrent (request (site timeline users) GET "/world/next.json" [("tick", "1")]) n
-                        stopTimeline timeline
-                        return time
+                        timeConcurrent (request (site timeline users) GET "/world/next.json" [("tick", "1")]) n
 
     averageTimes <- averageOverTrials 10 (mapM timeSite concurrentThreads)
 
