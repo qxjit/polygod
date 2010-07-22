@@ -1,0 +1,22 @@
+#!/bin/sh
+
+case "$1" in
+    start)
+      sudo ipfw pipe 1 config bw 2800Kbit/s delay 10ms
+
+      sudo ipfw add 1 pipe 1 src-port 8000
+      sudo ipfw add 2 pipe 1 dst-port 8000
+      ;;
+
+    stop)
+      sudo ipfw delete 1
+      sudo ipfw delete 2
+      ;;
+
+    *)
+      echo "Usage: script/simulate_slow_network {start|stop}"
+      exit 1
+      ;;
+esac
+
+exit 0
