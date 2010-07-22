@@ -117,19 +117,21 @@ $.widget("ui.masterCanvas", $.ui.mouse, $.extend({}, $.ui.abstractCellCanvas.pro
     }
   },
 
-  _repaintWorld:function(world) {
+  _repaintWorld:function(response) {
     this.adjustDimensionsToMatchWidth();
 
-    var max = world.cells.length;
+    var cells = response.world.cells;
+    var max = cells.length;
+
     for (var i = 0; i < max; i++) {
-      var cell = world.cells[i];
+      var cell = cells[i];
       this.paintCell(cell.point, cell.alive);
     }
 
-    $('.concurrentUsersCount').html(world.userCount);
+    $('.concurrentUsersCount').html(response.info.userCount);
 
     var widget = this;
-    polygod.getWorld(world.nextUrl, function(world) { widget._repaintWorld(world); });
+    polygod.getWorld(response.info.nextUrl, function(world) { widget._repaintWorld(world); });
   },
 
   _worldCoordinates:  function(pageX, pageY) {

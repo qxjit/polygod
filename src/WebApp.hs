@@ -29,7 +29,7 @@ main = do
   quickServer $ site timeline users
 
 newAppTimeline :: IO (Timeline SharedTimelineView)
-newAppTimeline = newTimeline (worldWidth, worldHeight) worldView
+newAppTimeline = newTimeline (worldWidth, worldHeight) sharedWorldView
 
 site :: Timeline SharedTimelineView -> UserSet -> Snap ()
 site timeline users = ifTop (rootHandler timeline) <|>

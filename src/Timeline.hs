@@ -2,6 +2,7 @@ module Timeline
   ( Timeline
   , Tick
   , newTimeline
+  , stopTimeline
   , now
   , worldAfter
   , interfere
@@ -17,7 +18,9 @@ import Data.Word
 import Life
 
 type Tick = Word16
-data Timeline a = Timeline (TVar (World,Tick,a)) (World -> Tick -> a)
+data Timeline a = Timeline { tlTVar::(TVar (World,Tick,a)),
+                             tlSharedView::(World -> Tick -> a),
+                             tlThreadId::ThreadId }
 
 tickDelay :: Int
 tickDelay = 1000 * 250
@@ -26,26 +29,33 @@ newTimeline :: Address -> (World -> Tick -> a) -> IO (Timeline a)
 newTimeline addr f = do
   let world = newWorld addr
   tvar <- (newTVarIO (world, 0, f world 0))
-  let timeline = Timeline tvar f
-  forkIO $ do
+  let timeline = Timeline { tlTVar = tvar, tlSharedView = f, tlThreadId = undefined }
+
+  threadId <- forkIO $ do
+    localThreadId <- myThreadId
+    let timeline' = timeline { tlThreadId = localThreadId }
     forever $ do
       threadDelay tickDelay
-      interfere evolve timeline
-  return timeline
+      interfere evolve timeline'
+
+  return $ timeline { tlThreadId = threadId }
+
+stopTimeline :: Timeline a -> IO ()
+stopTimeline = killThread . tlThreadId
 
 now :: Timeline a -> IO (World, Tick, a)
-now (Timeline tvar _) = readTVarIO tvar
+now = readTVarIO . tlTVar
 
 worldAfter :: Tick -> Timeline a -> IO (World, Tick, a)
-worldAfter oldTick (Timeline tvar _) = atomically $ do
-  (world, newTick, x) <- readTVar tvar
+worldAfter oldTick timeline = atomically $ do
+  (world, newTick, x) <- readTVar (tlTVar timeline)
   check (oldTick /= newTick)
   return (world, newTick, x)
 
 interfere :: (World -> World) -> Timeline a -> IO ()
-interfere f (Timeline tvar g) = atomically $ do
-  (!world, !tick, _) <- readTVar tvar
+interfere f timeline = atomically $ do
+  (!world, !tick, _) <- readTVar (tlTVar timeline)
   let !world' = f world -- force evaluation of the world now in case f raises any exceptions
       tick' = tick + 1
-  writeTVar tvar (world', tick', g world' tick')
+  writeTVar (tlTVar timeline) (world', tick', tlSharedView timeline world' tick')
 

@@ -1,34 +1,38 @@
 module WorldView
-  ( worldView
+  ( sharedWorldView
+  , requestSpecificWorldView
   , SharedTimelineView
+  , WorldView
+  , worldTemplate
   )
   where
 
-import           Control.Monad.Trans (liftIO)
-import           Data.ByteString.Char8 (pack, append)
+import           Data.ByteString.Char8 (ByteString, pack, append)
 
 import           Snap.Types
 import           Text.JSONb
+import qualified Data.Trie as Trie
 
 import           ConcurrentUsers
 import           Life
 import           Life.JSON
 import           Timeline
 
-type SharedTimelineView = UserToken -> UserSet -> Snap ()
+newtype SharedTimelineView = STV ByteString
+newtype WorldView = WV { wvByteString::ByteString }
 
-worldView :: World -> Tick -> SharedTimelineView
-worldView world tick userToken userSet = do
-  count <- liftIO (userCount userSet)
-  jsonTemplate $ worldViewJson world tick userToken count
+sharedWorldView :: World -> Tick -> SharedTimelineView
+sharedWorldView world _ = STV (encode Compact $ worldToJson world)
 
-worldViewJson :: World -> Tick -> UserToken -> UserCount -> JSON
-worldViewJson world tick userToken count =
-  let (Object trie) = worldToJson world
-      trieWithCount = add trie "userCount" (String (pack $ show count))
-  in Object (add trieWithCount "nextUrl" (String $ "/world/next.json?tick=" `append` (pack $ show tick)
-                                                                            `append` "&u="
-                                                                            `append` (tokenToString userToken)))
+requestSpecificWorldView :: SharedTimelineView -> Tick -> UserToken -> UserCount -> WorldView
+requestSpecificWorldView (STV worldJson) tick userToken count =
+  let trieWithCount = Trie.singleton "userCount" (String (pack $ show count))
+      trieWithUrl = add trieWithCount "nextUrl" (String $ "/world/next.json?tick=" `append` (pack $ show tick)
+                                                                                   `append` "&u="
+                                                                                   `append` (tokenToString userToken))
+      extraInfo = encode Compact (Object trieWithUrl)
+  -- String together final JSON by hand so concurrent requests can share the worldJson bytestring
+  in WV $ "{" `append` "\"world\":" `append` worldJson `append` ", \"info\":" `append` extraInfo `append` "}"
 
-jsonTemplate :: JSON -> Snap ()
-jsonTemplate = writeBS . encode Compact
+worldTemplate :: WorldView -> Snap ()
+worldTemplate = writeBS . wvByteString
