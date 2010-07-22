@@ -24,15 +24,17 @@ newtype WorldView = WV { wvByteString::ByteString }
 sharedWorldView :: World -> Tick -> SharedTimelineView
 sharedWorldView world _ = STV (encode Compact $ worldToJson world)
 
-requestSpecificWorldView :: SharedTimelineView -> Tick -> UserToken -> UserCount -> WorldView
+requestSpecificWorldView :: SharedTimelineView -> Tick -> UserToken -> UserCount -> (WorldView, ByteString)
 requestSpecificWorldView (STV worldJson) tick userToken count =
-  let trieWithCount = Trie.singleton "userCount" (String (pack $ show count))
-      trieWithUrl = add trieWithCount "nextUrl" (String $ "/world/next.json?tick=" `append` (pack $ show tick)
-                                                                                   `append` "&u="
-                                                                                   `append` (tokenToString userToken))
-      extraInfo = encode Compact (Object trieWithUrl)
+  let nextWorldUrl = "/world/next.json?tick=" `append` (pack $ show tick) `append` "&u=" `append` (tokenToString userToken)
+      trieWithCount = Trie.singleton "userCount" (String (pack $ show count))
+      trieWithUrl = add trieWithCount "nextUrl" (String nextWorldUrl)
+      trieWithTick = add trieWithUrl "tick" (Number (toRational tick))
+      extraInfo = encode Compact (Object trieWithTick)
   -- String together final JSON by hand so concurrent requests can share the worldJson bytestring
-  in WV $ "{" `append` "\"world\":" `append` worldJson `append` ", \"info\":" `append` extraInfo `append` "}"
+  in (WV $ "{" `append` "\"world\":" `append` worldJson `append` ", \"info\":" `append` extraInfo `append` "}", nextWorldUrl)
 
-worldTemplate :: WorldView -> Snap ()
-worldTemplate = writeBS . wvByteString
+worldTemplate :: (WorldView, ByteString) -> Snap ()
+worldTemplate (worldView, nextUrlBS) = do
+  modifyResponse (setHeader "Location" nextUrlBS)
+  writeBS (wvByteString worldView)

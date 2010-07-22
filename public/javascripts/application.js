@@ -82,11 +82,18 @@ $.widget("ui.masterCanvas", $.ui.mouse, $.extend({}, $.ui.abstractCellCanvas.pro
     });
 
     setTimeout(function() {
-      polygod.getWorld(widget.canvasElem.getAttribute('data-startUrl'),
-                       function(world) { widget._repaintWorld(world); });
+      polygod.getWorldLoop(widget.canvasElem.getAttribute('data-startUrl'),
+                       function(response) { widget._nextWorld(response); });
     }, 100);
 
     this._mouseInit();
+  },
+
+  _nextWorld: function(response) {
+    if (!this._lastResponse || (this._lastResponse.info.tick < response.info.tick)) {
+      this._lastResponse = response;
+      this._repaintWorld(this._lastResponse);
+    }
   },
 
   adjustDimensionsToMatchWidth: function() {
@@ -129,9 +136,6 @@ $.widget("ui.masterCanvas", $.ui.mouse, $.extend({}, $.ui.abstractCellCanvas.pro
     }
 
     $('.concurrentUsersCount').html(response.info.userCount);
-
-    var widget = this;
-    polygod.getWorld(response.info.nextUrl, function(world) { widget._repaintWorld(world); });
   },
 
   _worldCoordinates:  function(pageX, pageY) {
@@ -238,8 +242,23 @@ var polygod = {
     }
   },
 
+  getWorldLoop: function(url, successCallback) {
+    var xhr = polygod.getWorld(url, successCallback);
+    var oldORSC = xhr.onreadystatechange;
+    var nextRequestSpawned = false;
+
+    xhr.onreadystatechange = function(isTimeout) {
+      if (!nextRequestSpawned && xhr.getResponseHeader("Location")) {
+        nextRequestSpawned = true;
+        polygod.getWorldLoop(xhr.getResponseHeader("Location"), successCallback);
+      }
+      oldORSC(isTimeout);
+    };
+    return xhr;
+  },
+
   getWorld: function(url, successCallback) {
-    $.ajax({
+    return $.ajax({
       url: url,
       dataType: 'json',
       success: successCallback,
