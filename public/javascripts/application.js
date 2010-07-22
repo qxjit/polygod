@@ -155,7 +155,7 @@ $.widget("ui.masterCanvas", $.ui.mouse, $.extend({}, $.ui.abstractCellCanvas.pro
     polygod.postCells(this, [ { point: [coords.x, coords.y], alive: $('input:radio[name=tool]:checked').val() == "resurrect"} ]);
   },
 
-  _mouseStart: function(event) { this._updateWorld(event); },
+  _mouseDown: function(event) { this._updateWorld(event); },
   _mouseDrag: function(event) { this._updateWorld(event); }
 }));
 
