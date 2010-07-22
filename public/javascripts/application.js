@@ -69,6 +69,7 @@ $.widget("ui.masterCanvas", $.ui.mouse, $.extend({}, $.ui.abstractCellCanvas.pro
     this.width = parseInt(this.canvasElem.getAttribute('data-width'));
     this.height = parseInt(this.canvasElem.getAttribute('data-height'));
     this.adjustDimensionsToMatchWidth();
+    this._cells = new polygod.CellSpace(this.width, this.height);
 
     var widget = this;
 
@@ -86,13 +87,40 @@ $.widget("ui.masterCanvas", $.ui.mouse, $.extend({}, $.ui.abstractCellCanvas.pro
                        function(response) { widget._nextWorld(response); });
     }, 100);
 
+    var paintLoop = function() {
+      setTimeout(function() {
+        paintLoop();
+
+        if (!widget._newWorldFromServerSinceLastPaint()) {
+          widget._cells = widget._cells.evolve();
+        }
+
+        widget._repaintWorld();
+      }, 250);
+    };
+    paintLoop();
+
     this._mouseInit();
+  },
+
+  _newWorldFromServerSinceLastPaint: function() {
+    return this._lastResponse && this._lastResponse.info.tick != this._lastPaintedTick;
   },
 
   _nextWorld: function(response) {
     if (!this._lastResponse || (this._lastResponse.info.tick < response.info.tick)) {
       this._lastResponse = response;
-      this._repaintWorld(this._lastResponse);
+      var cells = response.world.cells;
+      var newCellSpace = this._cells.clone();
+
+      for (var i = 0; i < cells.length; i++) {
+        var cell = cells[i];
+        newCellSpace.setCellAt(cell.point[0], cell.point[1], cell.alive);
+      }
+
+      this._cells = newCellSpace;
+
+      $('.concurrentUsersCount').html(response.info.userCount);
     }
   },
 
@@ -124,18 +152,17 @@ $.widget("ui.masterCanvas", $.ui.mouse, $.extend({}, $.ui.abstractCellCanvas.pro
     }
   },
 
-  _repaintWorld:function(response) {
+  _repaintWorld:function() {
     this.adjustDimensionsToMatchWidth();
-
-    var cells = response.world.cells;
-    var max = cells.length;
-
-    for (var i = 0; i < max; i++) {
-      var cell = cells[i];
-      this.paintCell(cell.point, cell.alive);
+    if (this._lastResponse) {
+      this._lastPaintedTick = this._lastResponse.info.tick;
     }
 
-    $('.concurrentUsersCount').html(response.info.userCount);
+    for (var x = 0; x < this.width; x++) {
+      for (var y = 0; y < this.height; y++) {
+        this.paintCell([x, y], this._cells.getCellAt(x, y));
+      }
+    }
   },
 
   _worldCoordinates:  function(pageX, pageY) {
@@ -267,5 +294,82 @@ var polygod = {
         alert("Ajax error Updating World!");
       }
     });
+  },
+
+  CellSpace: function(width, height) {
+    var cells = new Array(width*height);
+    var properties = {
+      width: width,
+      height: height,
+
+      setCellAt: function(x, y, val) {
+        this[y * this.width + x] = val;
+      },
+
+      getCellAt: function(x, y) {
+        return this[y * this.width + x];
+      },
+
+      clone: function() {
+        var newCells = this.slice(0);
+        $.extend(newCells, properties);
+        return newCells;
+      },
+
+      evolve: function() {
+        var newCells = this.clone();
+
+        for (var x = 0; x < this.width; x++) {
+          for (var y = 0; y < this.height; y++) {
+            var neighborAddresses = neighboringAddresses(x, y, this.width, this.height);
+            var neighbors = [];
+
+            for (var i = 0; i < neighborAddresses.length; i++) {
+              var addr = neighborAddresses[i];
+              neighbors[i] = this.getCellAt(addr[0], addr[1]);
+            }
+
+            newCells.setCellAt(x, y, fate(this.getCellAt(x,y), neighbors));
+          }
+        }
+
+        return newCells;
+
+        function fate(cell, neighbors) {
+          var liveNeighbors = 0;
+
+          for (var i = 0; i < neighbors.length; i++) {
+            if (neighbors[i]) {
+              liveNeighbors++;
+            }
+          }
+
+          if (cell) {
+            return (liveNeighbors == 2) || (liveNeighbors == 3);
+          } else {
+            return liveNeighbors == 3;
+          }
+        };
+
+        function neighboringAddresses(x, y, width, height) {
+          var neighbors = [
+            [x - 1, y - 1],  [x, y - 1], [x + 1, y - 1],
+            [x - 1, y    ],              [x + 1, y    ],
+            [x - 1, y + 1],  [x, y + 1], [x + 1, y + 1]
+          ];
+
+          for (var i = 0; i < neighbors.length; i++) {
+            neighbors[i][0] = (neighbors[i][0] + width) % width;
+            neighbors[i][1] = (neighbors[i][1] + height) % height;
+          }
+
+          return neighbors;
+        };
+      },
+    };
+
+    $.extend(cells, properties);
+
+    return cells;
   },
 };
