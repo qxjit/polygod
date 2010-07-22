@@ -6,7 +6,9 @@
 * Revamp resurrect / smite toolbar
 
 * Fix chrome tab crashes
+
 * Give error 400 rather than 500 when cell address outside world is passed
+** Pereferrably without adding overhead of checking every cell address before... catching exception is probably better
 
 * Load test / optimize server
 ** Evaluate CPU impact of reaping stale users on every request
@@ -15,9 +17,6 @@
 ** "thread" = series of calls to same function using setTimeout (see _repaintWorld)
 
 -- OTHER IDEAS (EITHER R1 OR AFTER) --
-
-* Setup Snap Handler tests
-** Done for one test, need more tests
 
 * Multiple colors of cells based on user?
 
