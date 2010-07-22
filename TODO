@@ -13,6 +13,8 @@
 * Load test / optimize server
 ** Evaluate CPU impact of reaping stale users on every request
 
+* Optimize client / server communications
+
 * Investigate refactoring canvas display to use 1 "thread" to paint and 1 "thread" to query server
 ** "thread" = series of calls to same function using setTimeout (see _repaintWorld)
 
@@ -22,6 +24,8 @@
 ** Requests / Second (current, max)
 ** ms / request (rendering time only, not waiting for new world)
 ** Memory Usage (just max? Current may be misleading if GHC doesn't release heap after peaks)
+
+* Javascript Tests!
 
 * Access to a larger world that user sees only a part of at any given time?
 ** impact on shared json rendering between concurrent requests
