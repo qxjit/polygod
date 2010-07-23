@@ -1,6 +1,8 @@
 module WebApp where
 
 import           Control.Applicative
+import           Control.Monad.Trans (liftIO)
+import qualified Data.ByteString.Char8 as Char8
 
 import           Snap.Types
 import           Snap.Util.FileServe
@@ -33,16 +35,22 @@ withAppTimeline = withTimeline (worldWidth, worldHeight) sharedWorldView
 
 site :: Timeline SharedTimelineView -> UserSet -> Snap ()
 site timeline users = ifTop (rootHandler timeline) <|>
-                      noCache (route [ ("world/current.json", worldHandler users timeline)
-                                     , ("world/next.json", nextWorldHandler users timeline)
-                                     , ("world", updateWorldHandler timeline)
-                                     ]) <|>
+                      (do route [ ("world/current.json", worldHandler users timeline)
+                                , ("world/next.json", nextWorldHandler users timeline)
+                                , ("world", updateWorldHandler timeline)
+                                ]
+                          noCache
+                          addConcurrentUsersHeader users) <|>
                       fileServe "public"
 
-noCache :: Snap () -> Snap ()
-noCache handler = do
+addConcurrentUsersHeader :: UserSet -> Snap ()
+addConcurrentUsersHeader userSet = do
+  count <- liftIO (userCount userSet)
+  modifyResponse (setHeader "X-Polygod-ConcurrentUsers" (Char8.pack $ show count))
+
+noCache :: Snap ()
+noCache = do
   modifyResponse (setHeader "Pragma" "no-cache")
   modifyResponse (setHeader "Cache-Control" "no-cache")
   modifyResponse (setHeader "Expires" "-1")
-  handler
 

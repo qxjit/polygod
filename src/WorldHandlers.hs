@@ -36,9 +36,8 @@ generateNewUserToken userSet = do
 worldHandler :: UserSet -> Timeline SharedTimelineView -> Snap ()
 worldHandler userSet timeline = do
   user <- generateNewUserToken userSet
-  (_, tick, sharedWorld) <- liftIO (now timeline)
-  count <- liftIO (userCount userSet)
-  worldTemplate $ requestSpecificWorldView sharedWorld tick user count
+  (_, _, sharedWorld) <- liftIO (now timeline)
+  worldTemplate sharedWorld user
 
 nextWorldHandler :: UserSet -> Timeline SharedTimelineView -> Snap ()
 nextWorldHandler userSet timeline = do
@@ -54,9 +53,8 @@ nextWorldHandler userSet timeline = do
 
     maybe pass (\tickString ->
                     case readDec (map (chr . fromIntegral) (Strict.unpack tickString)) of
-                      [(tick, [])] -> do (_, tick', sharedWorld) <- liftIO (worldAfter tick timeline)
-                                         count <- liftIO (userCount userSet)
-                                         worldTemplate $ requestSpecificWorldView sharedWorld tick' user count
+                      [(tick, [])] -> do (_, _, sharedWorld) <- liftIO (worldAfter tick timeline)
+                                         worldTemplate sharedWorld user
                       _ -> pass)
           tickParam
 

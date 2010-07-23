@@ -84,7 +84,7 @@ $.widget("ui.masterCanvas", $.ui.mouse, $.extend({}, $.ui.abstractCellCanvas.pro
 
     setTimeout(function() {
       polygod.getWorldLoop(widget.canvasElem.getAttribute('data-startUrl'),
-                       function(response) { widget._nextWorld(response); });
+                       function(data, textStatus, xhr) { widget._nextWorld(data, xhr); });
     }, 100);
 
     var paintLoop = function() {
@@ -104,13 +104,13 @@ $.widget("ui.masterCanvas", $.ui.mouse, $.extend({}, $.ui.abstractCellCanvas.pro
   },
 
   _newWorldFromServerSinceLastPaint: function() {
-    return this._lastResponse && this._lastResponse.info.tick != this._lastPaintedTick;
+    return this._lastResponse && this._lastResponse.tick != this._lastPaintedTick;
   },
 
-  _nextWorld: function(response) {
-    if (!this._lastResponse || (this._lastResponse.info.tick < response.info.tick)) {
+  _nextWorld: function(response, xhr) {
+    if (!this._lastResponse || (this._lastResponse.tick < response.tick)) {
       this._lastResponse = response;
-      var cells = response.world.cells;
+      var cells = response.cells;
       var newCellSpace = this._cells.clone();
 
       for (var i = 0; i < cells.length; i++) {
@@ -120,7 +120,7 @@ $.widget("ui.masterCanvas", $.ui.mouse, $.extend({}, $.ui.abstractCellCanvas.pro
 
       this._cells = newCellSpace;
 
-      $('.concurrentUsersCount').html(response.info.userCount);
+      $('.concurrentUsersCount').html(xhr.getResponseHeader('X-Polygod-ConcurrentUsers'));
     }
   },
 
@@ -155,7 +155,7 @@ $.widget("ui.masterCanvas", $.ui.mouse, $.extend({}, $.ui.abstractCellCanvas.pro
   _repaintWorld:function() {
     this.adjustDimensionsToMatchWidth();
     if (this._lastResponse) {
-      this._lastPaintedTick = this._lastResponse.info.tick;
+      this._lastPaintedTick = this._lastResponse.tick;
     }
 
     for (var x = 0; x < this.width; x++) {

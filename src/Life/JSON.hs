@@ -12,9 +12,11 @@ import           Data.Trie
 import qualified Data.Trie as Trie
 
 import           Life
+import           Timeline
 
-worldToJson :: World -> JSON
-worldToJson w = Object $ Trie.singleton "cells" (Array $ map cellJson (addresses w))
+worldToJson :: World -> Tick -> JSON
+worldToJson w tick = Object $ add (Trie.singleton "cells" (Array $ map cellJson (addresses w)))
+                                                  "tick"  (Number (toRational tick))
   where (wWidth, wHeight) = Life.size w
         cellJson (x, y) = Object $ add (Trie.singleton "point" (Array [Number $ fromIntegral x, Number $ fromIntegral y]))
                                                        "alive" (Boolean $ isAlive (cellAt w (x, y)))
