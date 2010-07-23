@@ -1,6 +1,7 @@
 $(window).load(function() {
   $('#game-canvas').masterCanvas();
   $('.toolbar').buttonset();
+  $('#error-dialog').dialog({ autoOpen: false });
   $('#pattern-box').patternBox({
     masterCanvas: $('#game-canvas').data('masterCanvas'),
     patterns: [
@@ -261,7 +262,7 @@ var polygod = {
         data: JSON.stringify({cells: cells}),
         cache: false,
         error: function(req, status, error) {
-          alert("Ajax error Updating World!");
+          showError('Ajax error updating world!');
         }
       });
     } else {
@@ -291,7 +292,7 @@ var polygod = {
       success: successCallback,
       cache: false,
       error: function(req, status, error) {
-        alert("Ajax error Updating World!");
+        showError('Ajax error receiving world update!');
       }
     });
   },
@@ -373,3 +374,8 @@ var polygod = {
     return cells;
   },
 };
+
+function showError(message) {
+  $('#error-message').html(message);
+  $('#error-dialog').dialog('open');
+}

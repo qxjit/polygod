@@ -31,6 +31,8 @@ rootHandler timeline = do
     body $ do
       H.div ! class_ "app-content" $ do
         H.div ! class_ "ui-widget-content ui-corner-all app-container" $ do
+          H.div ! A.id "error-dialog" ! A.title "An error occured" $ do
+            p ! A.id "error-message" $ ""
           h1 ! class_ "ui-widget-header ui-corner-all" $ "Polygod"
           canvas ! A.id "game-canvas"
                  ! dataAttribute "startUrl" "/world/current.json"
