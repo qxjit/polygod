@@ -9,16 +9,14 @@ import           Data.ByteString.Char8 (ByteString, pack, append)
 
 import           Snap.Types
 import           Text.JSONb
-import qualified Data.Trie as Trie
 
 import           ConcurrentUsers
-import           Life
 import           Life.JSON
 import           Timeline
 
 data SharedTimelineView = STV ByteString Tick
 
-sharedWorldView :: World -> Tick -> SharedTimelineView
+sharedWorldView :: Projector SharedTimelineView
 sharedWorldView world tick = STV (encode Compact $ worldToJson world tick) tick
 
 nextWorldUrl :: Tick -> UserToken -> ByteString
