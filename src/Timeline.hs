@@ -35,7 +35,9 @@ data Timeline a = Timeline { tlTVar::(TVar (Slice a)),
 data Slice a = Slice { projection :: a, world :: !World, tick :: !Tick, slHistory :: [(Tick, World)], slUserWorlds :: [World] }
 
 instance Show (Slice a) where
-  show slice = "World size " ++ (show $ size (world slice)) ++ " at tick " ++ (show $ tick slice)
+  show slice = "World size " ++ (show $ size (world slice)) ++
+               " at tick " ++ (show $ tick slice) ++
+               " with " ++ (show $ length (slHistory slice)) ++ " historical records"
 
 data Configuration a = Config { tlSize::Address, tlTickDelay::TickDelay, tlProjector::Projector a, tlHistorySize::HistorySize }
 
@@ -106,10 +108,11 @@ addUserInput inputTick f s = do worldAtTimeOfInput <- lookup inputTick (slHistor
   where evolveUpTo w t t' | t == t' = w
                           | otherwise = evolveUpTo (evolve w) (t + 1) t'
 
-interfereAt :: Tick -> (World -> World) -> Timeline a -> IO (Maybe ())
+interfereAt :: Tick -> (World -> World) -> Timeline a -> IO (Maybe Tick)
 interfereAt inputTick f timeline = atomically $ do
   slice <- readTVar (tlTVar timeline)
   case addUserInput inputTick f slice of
-    Just slice' -> liftM Just $ writeTVar (tlTVar timeline) slice'
+    Just slice' -> do writeTVar (tlTVar timeline) slice'
+                      return $ Just (tick slice' + 1)
     _ -> return Nothing
 

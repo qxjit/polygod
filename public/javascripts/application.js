@@ -119,23 +119,55 @@ $.widget("ui.masterCanvas", $.ui.mouse, $.extend({}, $.ui.abstractCellCanvas.pro
     $('.predictedTicks').html(ticks);
   },
 
+  _serverTickToStopInputPrediction : null,
+  _runOnInputPrediction: false,
+
+  runWithInputPredictionIndefinitely: function() {
+    this._runOnInputPrediction = true;
+    this._serverTickToStopInputPrediction = null;
+  },
+
+  runWithInputPredictionUntilTick: function(tick) {
+    this.runWithInputPredictionIndefinitely();
+    this._serverTickToStopInputPrediction = tick;
+  },
+
+  stopRunningOnInputPrediction: function() {
+    this._runOnInputPrediction = false;
+    this._serverTickToStopInputPrediction = null;
+  },
+
   _nextWorld: function(response, xhr) {
+    if (this._runOnInputPrediction && this._serverTickToStopInputPrediction > response.tick) {
+      $.log("Skipping tick " + response.tick + " from service waiting for update " + this._serverTickToStopInputPrediction);
+      return;
+    }
+
+    if (this._runOnInputPrediction && !this._serverTickToStopInputPrediction) {
+      $.log("Skipping tick " + response.tick + " indefinitely");
+      return;
+    }
+
+    this.stopRunningOnInputPrediction();
+
     if (!this._lastServerTick || (this._lastServerTick < response.tick)) {
       this._setLastServerTick(response.tick);
       this._setPredictedTicks(0);
-
-      var cells = response.cells;
-      var newCellSpace = this._cells.clone();
-
-      for (var i = 0; i < cells.length; i++) {
-        var cell = cells[i];
-        newCellSpace.setCellAt(cell.point[0], cell.point[1], cell.alive);
-      }
-
-      this._cells = newCellSpace;
+      this.updateCells(response.cells);
 
       $('.concurrentUsersCount').html(xhr.getResponseHeader('X-Polygod-ConcurrentUsers'));
     }
+  },
+
+  updateCells: function(cells) {
+    var newCellSpace = this._cells.clone();
+
+    for (var i = 0; i < cells.length; i++) {
+      var cell = cells[i];
+      newCellSpace.setCellAt(cell.point[0], cell.point[1], cell.alive);
+    }
+
+    this._cells = newCellSpace;
   },
 
   adjustDimensionsToMatchWidth: function() {
@@ -266,13 +298,18 @@ var polygod = {
   postCells: function(cellCanvas, cells) {
     if ($(cells).all(function() { return this.point[0] >= 0 && this.point[0] < cellCanvas.width &&
                                          this.point[1] >= 0 && this.point[1] < cellCanvas.height; })) {
+      cellCanvas.runWithInputPredictionIndefinitely();
+      cellCanvas.updateCells(cells);
       $.log("Posting %d cells to world with dimension (%d, %d)", cells.length, cellCanvas.width, cellCanvas.height)
       $.ajax({
         type: 'POST',
         url: 'world',
         data: JSON.stringify({cells: cells, tick: cellCanvas._lastServerTick + cellCanvas._predictedTicks}),
+        dataType: 'json',
         cache: false,
+        success: function(data) { cellCanvas.runWithInputPredictionUntilTick(data.nextServerTickWithUpdate) },
         error: function(req, status, error) {
+          cellCanvas.stopRunningOnInputPrediction();
           showError('Ajax error updating world: ' + req.responseText);
         }
       });

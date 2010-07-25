@@ -4,7 +4,6 @@ import           Control.Monad (liftM)
 import           Control.Monad.Trans (liftIO)
 import qualified Data.ByteString as Strict
 import qualified Data.ByteString.Char8 as Char8
-import           Data.Char
 import           Data.Time.Clock
 import           Numeric
 
@@ -33,9 +32,9 @@ updateWorldHandler timeline = do
 
   result <- liftIO $ interfereAt (floor . fromRational $ inputTick) (updateCells newCells) timeline
 
-  processInput result "The update you posted was older than the servers history window."
+  outputTick <- processInput result "The update you posted was older than the servers history window."
 
-  writeBS "Divine intervention successful.  Happy godding!\n"
+  writeBS . Json.encode Json.Compact $ Json.Object (Trie.singleton "nextServerTickWithUpdate" (Json.Number $ toRational outputTick))
 
 generateNewUserToken :: UserSet -> Snap UserToken
 generateNewUserToken userSet = do
@@ -62,8 +61,8 @@ nextWorldHandler userSet timeline = do
 
     maybe pass (\tickString ->
                     case readDec (Char8.unpack tickString) of
-                      [(tick, [])] -> do sharedWorld <- (liftM projection) (liftIO $ sliceAfter tick timeline)
-                                         worldTemplate sharedWorld user
+                      [(lastTick, [])] -> do sharedWorld <- (liftM projection) (liftIO $ sliceAfter lastTick timeline)
+                                             worldTemplate sharedWorld user
                       _ -> pass)
           tickParam
 

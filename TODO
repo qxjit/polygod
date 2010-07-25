@@ -20,6 +20,8 @@
 
 -- OTHER IDEAS (EITHER R1 OR AFTER) --
 
+* Fully Implement HTTP (accept header based responses, etc)
+
 * Pimp Stats Section
 ** Requests / Second (current, max)
 ** ms / request (rendering time only, not waiting for new world)

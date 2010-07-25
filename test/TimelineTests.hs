@@ -67,6 +67,11 @@ tests = testGroup "Timeline" [
               `catch` (\e -> return $ show (e :: SomeException))
       x @?= "Caught It"
 
+ ,"interefereAt returns the next tick that will include the change" `testCase` do
+    withTimeline (defaultConfig { tlTickDelay = 10000 }) $ \timeline -> do
+      sliceAfter 2 timeline
+      interfereAt 1 id timeline >>= (@?= Just 4)
+
  ,"sliceAfter returns a projection following the given tick" `testCase` do
     withTimeline (defaultConfig {tlTickDelay = 50}) $ \timeline -> do
       let oldTick = 1
