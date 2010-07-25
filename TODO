@@ -22,6 +22,8 @@
 
 * Fully Implement HTTP (accept header based responses, etc)
 
+* Use colors to distinguish results of predictive input from authoritative server cells..
+
 * Pimp Stats Section
 ** Requests / Second (current, max)
 ** ms / request (rendering time only, not waiting for new world)
