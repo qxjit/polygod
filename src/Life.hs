@@ -18,12 +18,13 @@ module Life
 
 import Data.Array.IArray
 import Data.Array.Unboxed
+import Data.Word
 
 data Cell = Alive | Dead deriving (Show, Eq)
 type Dimension = Int
 type Address = (Dimension, Dimension)
 
-newtype World = World (UArray Address Bool)
+newtype World = World (UArray Address Bool) deriving (Eq)
 
 instance Show World where
   show world = "World " ++ (show $ size world)

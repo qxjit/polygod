@@ -1,6 +1,5 @@
 module RootHandlers where
 
-import           Control.Monad.Trans (liftIO)
 import           Data.String (fromString)
 
 import           Snap.Types
@@ -9,14 +8,11 @@ import qualified Text.Blaze.Html5 as H
 import           Text.Blaze.Html5.Attributes
 import qualified Text.Blaze.Html5.Attributes as A
 
-
-import qualified Life as Life
 import           Timeline
 
 rootHandler :: Timeline a -> Snap ()
 rootHandler timeline = do
-  (world, _, _) <- liftIO (now timeline)
-  let (wWidth, wHeight) = Life.size world
+  let (wWidth, wHeight) = tlSize $ tlConfig timeline
 
   blazeTemplate $ html $ do
     H.head $ do
@@ -48,9 +44,13 @@ rootHandler timeline = do
             H.label ! for "smite" $ "Smite"
 
           H.div ! A.id "pattern-box" $ ""
-          H.div ! class_ "concurrentUsersDisplay" $ do
+          H.div $ do
             "Concurrent Users: "
             H.span ! class_ "concurrentUsersCount" $ ""
+            " Last Tick From Server: "
+            H.span ! class_ "lastServerTick" $ ""
+            " Predictive Lookahead: "
+            H.span ! class_ "predictedTicks" $ ""
 
 blazeTemplate :: Html a -> Snap ()
 blazeTemplate = writeLBS . renderHtml

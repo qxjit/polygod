@@ -5,8 +5,12 @@ module TestHelper
   , module Test.QuickCheck
   , module Test.HUnit
   , module ArbitraryInstances
+  , module Debug.Trace
+  , dbg
   )
   where
+
+import Debug.Trace
 
 import Test.Framework
 import Test.Framework.Providers.QuickCheck2
@@ -16,3 +20,5 @@ import Test.QuickCheck hiding (Testable)
 import Test.HUnit hiding (Test, Testable)
 import ArbitraryInstances
 
+dbg :: Show a => String -> a -> b -> b
+dbg s a = trace (s ++ ": " ++ show a)

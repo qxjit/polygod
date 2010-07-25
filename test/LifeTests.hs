@@ -8,11 +8,11 @@ tests :: Test
 tests = testGroup "Life"
   [ "evolve maintains world size" `testProperty` \world -> (size world) == (size $ evolve world)
   , "world has correct cell count for size" `testProperty` \world ->
-      let (width, height) = size world in length (cells world) == width * height
+      let (width, height) = size world in genericLength (cells world) == width * height
 
   , "new world has correct size and cells" `testProperty` \(width', height') someCells -> not (null someCells) ==>
       let worldSize@(width, height) = ((width' `mod` 100) + 1, (height' `mod` 100) + 1)
-          worldCells = (take (width * height) (cycle someCells))
+          worldCells = (genericTake (width * height) (cycle someCells))
           world = newWorldWithCells worldSize worldCells
       in (size world) == worldSize && (cells world) == worldCells
 

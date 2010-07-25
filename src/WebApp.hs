@@ -27,11 +27,11 @@ main = do
     users <- newUserSet
 
     gliderGunPattern <- loadPattern "gospersGliderGun.txt"
-    interfere (drawPatternAt (0, 0) gliderGunPattern) timeline
+    interfereAt 0 (drawPatternAt (0, 0) gliderGunPattern) timeline
     quickServer $ site timeline users
 
 withAppTimeline :: (Timeline SharedTimelineView -> IO a) -> IO a
-withAppTimeline = withTimeline (worldWidth, worldHeight) sharedWorldView
+withAppTimeline = withTimeline (defaultConfig {tlSize = (worldWidth, worldHeight), tlProjector = sharedWorldView})
 
 site :: Timeline SharedTimelineView -> UserSet -> Snap ()
 site timeline users = ifTop (rootHandler timeline) <|>

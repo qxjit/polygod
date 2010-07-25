@@ -93,6 +93,7 @@ $.widget("ui.masterCanvas", $.ui.mouse, $.extend({}, $.ui.abstractCellCanvas.pro
         paintLoop();
 
         if (!widget._newWorldFromServerSinceLastPaint()) {
+          widget._setPredictedTicks(widget._predictedTicks + 1);
           widget._cells = widget._cells.evolve();
         }
 
@@ -105,12 +106,24 @@ $.widget("ui.masterCanvas", $.ui.mouse, $.extend({}, $.ui.abstractCellCanvas.pro
   },
 
   _newWorldFromServerSinceLastPaint: function() {
-    return this._lastResponse && this._lastResponse.tick != this._lastPaintedTick;
+    return this._lastServerTick != this._lastPaintedServerTick;
+  },
+
+  _setLastServerTick: function(tick) {
+    this._lastServerTick = tick;
+    $('.lastServerTick').html(tick);
+  },
+
+  _setPredictedTicks: function(ticks) {
+    this._predictedTicks = ticks;
+    $('.predictedTicks').html(ticks);
   },
 
   _nextWorld: function(response, xhr) {
-    if (!this._lastResponse || (this._lastResponse.tick < response.tick)) {
-      this._lastResponse = response;
+    if (!this._lastServerTick || (this._lastServerTick < response.tick)) {
+      this._setLastServerTick(response.tick);
+      this._setPredictedTicks(0);
+
       var cells = response.cells;
       var newCellSpace = this._cells.clone();
 
@@ -155,9 +168,7 @@ $.widget("ui.masterCanvas", $.ui.mouse, $.extend({}, $.ui.abstractCellCanvas.pro
 
   _repaintWorld:function() {
     this.adjustDimensionsToMatchWidth();
-    if (this._lastResponse) {
-      this._lastPaintedTick = this._lastResponse.tick;
-    }
+    this._lastPaintedServerTick = this._lastServerTick;
 
     for (var x = 0; x < this.width; x++) {
       for (var y = 0; y < this.height; y++) {
@@ -259,10 +270,10 @@ var polygod = {
       $.ajax({
         type: 'POST',
         url: 'world',
-        data: JSON.stringify({cells: cells}),
+        data: JSON.stringify({cells: cells, tick: cellCanvas._lastServerTick + cellCanvas._predictedTicks}),
         cache: false,
         error: function(req, status, error) {
-          showError('Ajax error updating world!');
+          showError('Ajax error updating world: ' + req.responseText);
         }
       });
     } else {

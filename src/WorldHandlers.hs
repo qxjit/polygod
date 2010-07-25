@@ -1,11 +1,14 @@
 module WorldHandlers where
 
+import           Control.Monad (liftM)
 import           Control.Monad.Trans (liftIO)
 import qualified Data.ByteString as Strict
+import qualified Data.ByteString.Char8 as Char8
 import           Data.Char
 import           Data.Time.Clock
 import           Numeric
 
+import qualified Data.Trie as Trie
 import qualified Text.JSONb as Json
 import           Snap.Types
 
@@ -25,7 +28,13 @@ updateWorldHandler timeline = do
   newCells <- processInput (jsonToCells json)
                "The JSON you posted didn't include any properly structured cell data."
 
-  liftIO $ interfere (updateCells newCells) timeline
+  inputTick <- processInput (jsonNumber =<< jsonProperty "tick" json)
+               "The JSON you posted didn't include a tick valuefor when the change happened."
+
+  result <- liftIO $ interfereAt (floor . fromRational $ inputTick) (updateCells newCells) timeline
+
+  processInput result "The update you posted was older than the servers history window."
+
   writeBS "Divine intervention successful.  Happy godding!\n"
 
 generateNewUserToken :: UserSet -> Snap UserToken
@@ -36,7 +45,7 @@ generateNewUserToken userSet = do
 worldHandler :: UserSet -> Timeline SharedTimelineView -> Snap ()
 worldHandler userSet timeline = do
   user <- generateNewUserToken userSet
-  (_, _, sharedWorld) <- liftIO (now timeline)
+  sharedWorld <- (liftM projection) (liftIO $ sliceNow timeline)
   worldTemplate sharedWorld user
 
 nextWorldHandler :: UserSet -> Timeline SharedTimelineView -> Snap ()
@@ -52,8 +61,8 @@ nextWorldHandler userSet timeline = do
     tickParam <- getParam "tick"
 
     maybe pass (\tickString ->
-                    case readDec (map (chr . fromIntegral) (Strict.unpack tickString)) of
-                      [(tick, [])] -> do (_, _, sharedWorld) <- liftIO (worldAfter tick timeline)
+                    case readDec (Char8.unpack tickString) of
+                      [(tick, [])] -> do sharedWorld <- (liftM projection) (liftIO $ sliceAfter tick timeline)
                                          worldTemplate sharedWorld user
                       _ -> pass)
           tickParam

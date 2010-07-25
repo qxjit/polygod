@@ -1,5 +1,5 @@
 module Pattern
-  ( Pattern
+  ( Pattern(..)
   , loadPattern
   , drawPatternAt
   )
@@ -21,6 +21,7 @@ loadPattern filePath = do
   return $ Pattern (concat patternCells)
 
 drawPatternAt :: Address -> Pattern -> World -> World
-drawPatternAt (xOff, yOff) (Pattern updates) = updateCells (map offset updates)
-  where offset ((x, y), cell) = ((x + xOff, y + yOff), cell)
+drawPatternAt (xOff, yOff) (Pattern updates) world = updateCells (map offset updates) world
+  where (width, height) = size world
+        offset ((x, y), cell) = ( ( (x + xOff) `mod` width, (y + yOff) `mod` height), cell)
 
