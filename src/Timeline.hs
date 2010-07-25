@@ -32,7 +32,7 @@ data Timeline a = Timeline { tlTVar::(TVar (Slice a)),
                              tlThreadId::ThreadId,
                              tlConfig::Configuration a }
 
-data Slice a = Slice { projection :: a, world :: World, tick :: Tick, slHistory :: [(Tick, World)], slUserWorlds :: [World] }
+data Slice a = Slice { projection :: a, world :: !World, tick :: !Tick, slHistory :: [(Tick, World)], slUserWorlds :: [World] }
 
 instance Show (Slice a) where
   show slice = "World size " ++ (show $ size (world slice)) ++ " at tick " ++ (show $ tick slice)
@@ -50,10 +50,9 @@ newTimeline config = do
   threadId <- forkIO $ do
     forever $ do
       threadDelay (tlTickDelay config)
-      dbgSlice <- readTVarIO tvar
       atomically $ do
         slice <- readTVar tvar
-        let slice' = nextSlice (tlProjector config) slice
+        let !slice' = nextSlice (tlProjector config) slice
         writeTVar tvar (trimHistory (tlHistorySize config) slice')
 
   return $ Timeline { tlTVar = tvar, tlThreadId = threadId, tlConfig = config }
