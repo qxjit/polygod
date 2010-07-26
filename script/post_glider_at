@@ -1,0 +1,24 @@
+#!/bin/sh
+
+# Posts a glider pattern at the specified world location using curl
+#
+# Usage: ./script/post_glider_at <tick> <x> <y>
+#
+# To post multiple gliders in parallel, using '&' in bash. e.g.:
+#
+#   ./script/post_glider_at 100 15 15& ./script/post_glider_at 100 50 25
+#
+
+TICK=$1
+X=$2
+Y=$3
+
+function cell() {
+  local CX=$1
+  local CY=$2
+  echo "{\"point\": [$(($X + $CX)), $(($Y + $CY))], \"alive\": true}"
+}
+
+GLIDER="{\"tick\": $TICK, \"cells\": [$(cell 1 0), $(cell 2 1), $(cell 0 2), $(cell 1 2), $(cell 2 2)]}"
+
+curl -d "$GLIDER" http://localhost:8000/world
