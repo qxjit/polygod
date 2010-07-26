@@ -35,16 +35,28 @@ tests = testGroup "Timeline.Slice" [
 
  ,"nextSlice evolves new world from current one" `testProperty` \slice (Blind projector) ->
       let _ = (slice, projector) :: (Slice (), Projector ())
-          slice' = nextSlice projector slice
-      in world slice' == evolve (world slice)
+      in world (nextSlice projector slice) == evolve (world slice)
 
  ,"nextSlice evolves from userInput if present" `testProperty` \slice (Blind projector) input ->
       let _ = (slice, projector) :: (Slice (), Projector ())
+
           Just sliceWithInput = addUserInput (tick slice) (drawPatternAt (0,0) input) slice
           slice' = nextSlice projector sliceWithInput
-          worldWithInput = (drawPatternAt (0,0) input $ world slice)
+          worldWithInput = drawPatternAt (0,0) input $ world slice
+
       in world slice' == evolve worldWithInput &&
          world (nextSlice projector slice') == (evolve . evolve) worldWithInput
+
+ ,"nextSlice unions multiple user inputs" `testProperty` \slice (Blind projector) input1 input2 ->
+      let _ = (slice, projector) :: (Slice (), Projector ())
+
+          Just sliceWithInput1 = addUserInput (tick slice) (drawPatternAt (0,0) input1) slice
+          Just sliceWithInput2 = addUserInput (tick slice) (drawPatternAt (0,0) input2) sliceWithInput1
+
+          worldWithInput1 = drawPatternAt (0,0) input1 (world slice)
+          worldWithInput2 = drawPatternAt (0,0) input2 (world slice)
+
+      in world (nextSlice projector sliceWithInput2) == evolve (merge worldWithInput1 worldWithInput2)
 
  ,"nextSlice evolves world from user historical input" `testProperty` \slice (Blind projector) input ->
       let _ = (slice, projector) :: (Slice (), Projector ())

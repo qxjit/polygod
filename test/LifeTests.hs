@@ -35,4 +35,14 @@ tests = testGroup "Life"
       (fate Dead neighbors == Alive) == (length (filter (==Alive) neighbors) == 3)
   , "an Alive cell with 2 or 3 live neighbors lives" `testProperty` \(NeighborList neighbors) ->
       (fate Alive neighbors == Alive) == (length (filter (==Alive) neighbors) `elem` [2,3])
+
+  , "merge produces world big enough for both worlds" `testProperty` \world1 world2 ->
+      let (width1, height1) = size world1
+          (width2, height2) = size world2
+      in size (merge world1 world2) == (max width1 width2, max height1 height2)
+
+  , "merge favors life over death" `testProperty` \world1 world2 ->
+      let mergedWorld = merge world1 world2
+          mergedOk ix = (cellAt mergedWorld ix == Alive) == (safeCellAt world1 ix == Alive || safeCellAt world2 ix == Alive)
+      in all mergedOk (addresses mergedWorld)
   ]

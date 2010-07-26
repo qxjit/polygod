@@ -37,7 +37,8 @@ newSlice f w t = Slice { world = w, tick = t, projection = f w t, slHistory = [(
 
 nextSlice :: Projector b -> Slice a -> Slice b
 nextSlice f s = let tick' = (tick s) + 1
-                    world' = evolve (head $ slUserWorlds s ++ [world s])
+                    world' | (not . null) (slUserWorlds s) = evolve (foldl1' merge $ slUserWorlds s)
+                           | otherwise = evolve (world s)
                 in Slice { tick = tick'
                          , projection = f world' tick'
                          , world = world'
@@ -52,7 +53,7 @@ addUserInput :: Tick -> (World -> World) -> Slice a -> Maybe (Slice a)
 addUserInput inputTick f s = do worldAtTimeOfInput <- lookup inputTick (slHistory s)
                                 -- evaluating strictly so any exceptions will be raised while request is still being handled
                                 let !userWorld = evolveUpTo (f worldAtTimeOfInput) inputTick (tick s)
-                                return $ s { slUserWorlds = [ userWorld ] }
+                                return $ s { slUserWorlds = userWorld : slUserWorlds s }
   where evolveUpTo w t t' | t == t' = w
                           | otherwise = evolveUpTo (evolve w) (t + 1) t'
 

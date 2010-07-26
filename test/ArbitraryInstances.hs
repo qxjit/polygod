@@ -1,6 +1,8 @@
 module ArbitraryInstances where
 
 import Control.Monad
+import Data.Function
+import Data.List
 import Data.Word
 
 import Test.QuickCheck.Gen
@@ -51,4 +53,4 @@ instance Arbitrary a => Arbitrary (Slice a) where
   arbitrary = liftM3 newSlice arbitrary arbitrary arbitrary
 
 instance Arbitrary Pattern where
-  arbitrary = liftM Pattern arbitrary
+  arbitrary = liftM Pattern (liftM (nubBy ((==) `on` fst)) arbitrary)
