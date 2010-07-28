@@ -18,8 +18,8 @@ module Life
   )
   where
 
-import Data.Array.IArray
-import Data.Array.Unboxed
+import           Data.Array.IArray
+import           Data.Array.Unboxed
 
 data Cell = Alive | Dead deriving (Show, Eq)
 type Dimension = Int
@@ -63,7 +63,7 @@ addresses :: World -> [Address]
 addresses (World ary) = indices ary
 
 evolve :: World -> World
-evolve world@(World ary) = World $ array (bounds ary) (map newCellAt $ indices ary)
+evolve world@(World ary) = World $ {-# SCC "evolve-array" #-} array (bounds ary) (map newCellAt $ indices ary)
   where newCellAt ix = (ix, fromCell $ fate (cellAt world ix) (map (cellAt world) (neighboringAddresses world ix)))
 
 updateCells:: [(Address, Cell)] -> World -> World
@@ -85,7 +85,17 @@ fate Dead neighbors = if (length (filter (==Alive) neighbors)) == 3 then Alive e
 fate Alive neighbors = if (length (filter (==Alive) neighbors)) `elem` [2,3] then Alive else Dead
 
 neighboringAddresses :: World -> Address -> [Address]
-neighboringAddresses world (x, y) = map offset cases
+neighboringAddresses world (x, y) = [ (x |- 1, y $- 1), (x, y $- 1), (x |+ 1, y $- 1),
+                                      (x |- 1, y     ),              (x |+ 1, y     ),
+                                      (x |- 1, y $+ 1), (x, y $+ 1), (x |+ 1, y $+ 1) ]
   where (width, height) = size world
-        cases = [(dX, dY) | dX <- [-1..1], dY <- [-1..1], not (dX == 0 && dY == 0)]
-        offset (dX, dY) = ((x + dX) `mod` width, (y + dY) `mod` height)
+        x' |- n = (x' - n) `mod` width
+        x' |+ n = (x' + n) `mod` width
+        y' $- n = (y' - n) `mod` height
+        y' $+ n = (y' + n) `mod` height
+        {-# INLINE (|-) #-}
+        {-# INLINE (|+) #-}
+        {-# INLINE ($-) #-}
+        {-# INLINE ($+) #-}
+
+
