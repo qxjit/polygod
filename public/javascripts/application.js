@@ -63,7 +63,7 @@ $.widget("ui.abstractCellCanvas", {
   }
 });
 
-$.widget("ui.masterCanvas", $.ui.mouse, $.extend({}, $.ui.abstractCellCanvas.prototype, {
+$.widget("ui.masterCanvas", $.extend({}, $.ui.abstractCellCanvas.prototype, {
   _create: function() {
     $.ui.abstractCellCanvas.prototype._create.apply(this);
 
@@ -101,8 +101,6 @@ $.widget("ui.masterCanvas", $.ui.mouse, $.extend({}, $.ui.abstractCellCanvas.pro
       }, 250);
     };
     paintLoop();
-
-    this._mouseInit();
   },
 
   _newWorldFromServerSinceLastPaint: function() {
@@ -223,18 +221,9 @@ $.widget("ui.masterCanvas", $.ui.mouse, $.extend({}, $.ui.abstractCellCanvas.pro
 
     return { x: worldX, y: worldY };
   },
-
-  _updateWorld: function(event) {
-    var coords = this._worldCoordinates( event.pageX, event.pageY );
-    $.log("Updating world at (%d,%d) in repsonse to event at (%d,%d)", coords.x, coords.y, event.pageX, event.pageY);
-    polygod.postCells(this, [ { point: [coords.x, coords.y], alive: $('input:radio[name=tool]:checked').val() == "resurrect"} ]);
-  },
-
-  _mouseDown: function(event) { this._updateWorld(event); },
-  _mouseDrag: function(event) { this._updateWorld(event); }
 }));
 
-$.widget("ui.patternCanvas", $.ui.mouse, $.extend({}, $.ui.abstractCellCanvas.prototype, {
+$.widget("ui.patternCanvas", $.extend({}, $.ui.abstractCellCanvas.prototype, {
   options: {
     pattern: null,
     masterCanvas: null,
