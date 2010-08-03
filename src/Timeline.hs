@@ -63,6 +63,7 @@ interfereAt inputTick f timeline = atomically $ do
   slice <- readTVar (tlTVar timeline)
   case addUserInput inputTick f slice of
     Just slice' -> do writeTVar (tlTVar timeline) slice'
+                      let !w' = world slice' -- compute world strictly to force exception in case user function is bad
                       return $ Just (tick slice' + 1)
     _ -> return Nothing
 

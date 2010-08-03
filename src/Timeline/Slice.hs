@@ -15,15 +15,41 @@ import Life
 type Tick = Word16
 type HistorySize = Word8
 type Projector a = World -> Tick -> a
-data Slice a = Slice { projection :: a, world :: !World, tick :: !Tick, slHistory :: [(Tick, World)], slUserWorlds :: [World] }
+type UserInputs = [World -> World]
+
+data Slice a = Slice { projection :: a, slHistory :: HistoricalRecord }
+data HistoricalRecord = Evolution { hrTick::Tick, hrInput::UserInputs, hrPrevious::HistoricalRecord }
+                      | BaseState { hrTick::Tick, hrInput::UserInputs, baseWorld::World }
 
 instance Show (Slice a) where
   show slice = "World size " ++ (show $ size (world slice)) ++
                " at tick " ++ (show $ tick slice) ++
-               " with " ++ (show $ length (slHistory slice)) ++ " historical records"
+               " with " ++ (show $ hrLength (slHistory slice)) ++ " historical records"
 
 maxCloseTickDifference :: Word16
 maxCloseTickDifference = 11
+
+tick :: Slice a -> Tick
+tick = hrTick . slHistory
+
+world :: Slice a -> World
+world = hrWorld . slHistory
+
+hrIsBase :: HistoricalRecord -> Bool
+hrIsBase (BaseState _ _ _) = True
+hrIsBase _ = False
+
+hrLength :: HistoricalRecord -> Int
+hrLength hr | hrIsBase hr = 1
+            | otherwise = 1 + hrLength (hrPrevious hr)
+
+hrWorld :: HistoricalRecord -> World
+hrWorld hr | null (hrInput hr) = hrWorld' hr
+           | otherwise = foldl1' merge worldsWithUserInput
+
+  where hrWorld' hr' | hrIsBase hr' = baseWorld hr'
+                     | otherwise = evolve . hrWorld . hrPrevious $ hr'
+        worldsWithUserInput = map ($ hrWorld' hr) (hrInput hr)
 
 farApart :: Tick -> Tick -> Bool
 farApart tick1 tick2 = tick2 - tick1 > maxCloseTickDifference && tick1 - tick2 > maxCloseTickDifference
@@ -33,27 +59,36 @@ t1 `after` t2 | farApart t1 t2 = True
               | otherwise = (t1 - t2) < (t2 - t1)
 
 newSlice :: Projector a -> World -> Tick -> Slice a
-newSlice f w t = Slice { world = w, tick = t, projection = f w t, slHistory = [(t,w)], slUserWorlds = [] }
+newSlice f w t = Slice { projection = f w t
+                       , slHistory = BaseState { hrTick = t
+                                               , baseWorld = w
+                                               , hrInput=[]
+                                               }
+                       }
 
 nextSlice :: Projector b -> Slice a -> Slice b
-nextSlice f s = let tick' = (tick s) + 1
-                    world' | (not . null) (slUserWorlds s) = evolve (foldl1' merge $ slUserWorlds s)
-                           | otherwise = evolve (world s)
-                in Slice { tick = tick'
-                         , projection = f world' tick'
-                         , world = world'
-                         , slHistory = (tick', world') : (slHistory s)
-                         , slUserWorlds = []
-                         }
+nextSlice f s = let s' = Slice { projection = f (world s') (tick s')
+                               , slHistory = Evolution { hrTick = tick s + 1
+                                                       , hrInput=[]
+                                                       , hrPrevious = slHistory s
+                                                       }
+                               }
+                in s'
 
 trimHistory :: HistorySize -> Slice a -> Slice a
-trimHistory n s = s { slHistory = genericTake n (slHistory s) }
+trimHistory n s = s { slHistory = trimHistory' n (slHistory s) }
+  where trimHistory' _ base | hrIsBase base = base
+        trimHistory' 1 hr = BaseState { hrTick = hrTick hr
+                                      , hrInput = hrInput hr
+                                      , baseWorld = evolve . hrWorld . hrPrevious $ hr
+                                      }
+        trimHistory' n' hr = hr { hrPrevious = trimHistory' (n' - 1) (hrPrevious hr) }
 
 addUserInput :: Tick -> (World -> World) -> Slice a -> Maybe (Slice a)
-addUserInput inputTick f s = do worldAtTimeOfInput <- lookup inputTick (slHistory s)
-                                -- evaluating strictly so any exceptions will be raised while request is still being handled
-                                let !userWorld = evolveUpTo (f worldAtTimeOfInput) inputTick (tick s)
-                                return $ s { slUserWorlds = userWorld : slUserWorlds s }
-  where evolveUpTo w t t' | t == t' = w
-                          | otherwise = evolveUpTo (evolve w) (t + 1) t'
+addUserInput inputTick f s = do newHistory <- addUserInput' (slHistory s)
+                                return $ s { slHistory = newHistory }
+  where addUserInput' hr | hrTick hr == inputTick = return $ hr { hrInput = f : hrInput hr }
+                         | hrIsBase hr = Nothing
+                         | otherwise = do newPrevious <- addUserInput' (hrPrevious hr)
+                                          return $ hr { hrPrevious = newPrevious }
 

@@ -18,7 +18,7 @@ tests = testGroup "Timeline" [
               `catch` (\e -> return $ show (e :: SomeException))
       x @?= "Caught It"
 
- ,"interefereAt returns the next tick that will include the change" `testCase` do
+ ,"interfereAt returns the next tick that will include the change" `testCase` do
     withTimeline (defaultConfig { tlTickDelay = 10000 }) $ \timeline -> do
       sliceAfter 2 timeline
       interfereAt 1 id timeline >>= (@?= Just 4)

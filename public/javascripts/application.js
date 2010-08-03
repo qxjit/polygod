@@ -104,12 +104,24 @@ $.widget("ui.masterCanvas", $.extend({}, $.ui.abstractCellCanvas.prototype, {
   },
 
   _newWorldFromServerSinceLastPaint: function() {
-    return this._lastServerTick != this._lastPaintedServerTick;
+    return this.lastServerTick() != this._lastPaintedServerTick;
   },
 
-  _setLastServerTick: function(tick) {
-    this._lastServerTick = tick;
-    $('.lastServerTick').html(tick);
+  lastServerTick: function() {
+    if (this._lastServerResponse) {
+      return this._lastServerResponse.tick;
+    } else {
+      return null;
+    }
+  },
+
+  currentTick: function() {
+    return this.lastServerTick() + this._predictedTicks;
+  },
+
+  _setLastServerResponse: function(response) {
+    this._lastServerResponse = response;
+    $('.lastServerTick').html(response.tick);
   },
 
   _setPredictedTicks: function(ticks) {
@@ -148,8 +160,8 @@ $.widget("ui.masterCanvas", $.extend({}, $.ui.abstractCellCanvas.prototype, {
 
     this.stopRunningOnInputPrediction();
 
-    if (!this._lastServerTick || (this._lastServerTick < response.tick)) {
-      this._setLastServerTick(response.tick);
+    if (!this.lastServerTick() || (this.lastServerTick() < response.tick)) {
+      this._setLastServerResponse(response);
       this._setPredictedTicks(0);
       this.updateCells(response.cells);
 
@@ -170,7 +182,7 @@ $.widget("ui.masterCanvas", $.extend({}, $.ui.abstractCellCanvas.prototype, {
 
   adjustDimensionsToMatchWidth: function() {
     if (this.element.width() != this._widthDimensionsWereBasedOn) {
-      var impl = function() {
+      function impl() {
         var currentWidth = this.element.width();
 
         this.cellSize = currentWidth / this.width;
@@ -198,7 +210,7 @@ $.widget("ui.masterCanvas", $.extend({}, $.ui.abstractCellCanvas.prototype, {
 
   _repaintWorld:function() {
     this.adjustDimensionsToMatchWidth();
-    this._lastPaintedServerTick = this._lastServerTick;
+    this._lastPaintedServerTick = this.lastServerTick();
 
     for (var x = 0; x < this.width; x++) {
       for (var y = 0; y < this.height; y++) {
@@ -293,7 +305,7 @@ var polygod = {
       $.ajax({
         type: 'POST',
         url: 'world',
-        data: JSON.stringify({cells: cells, tick: cellCanvas._lastServerTick + cellCanvas._predictedTicks}),
+        data: JSON.stringify({cells: cells, tick: cellCanvas.currentTick()}),
         dataType: 'json',
         cache: false,
         success: function(data) { cellCanvas.runWithInputPredictionUntilTick(data.nextServerTickWithUpdate) },
