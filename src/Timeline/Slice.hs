@@ -59,21 +59,19 @@ t1 `after` t2 | farApart t1 t2 = True
               | otherwise = (t1 - t2) < (t2 - t1)
 
 newSlice :: Projector a -> World -> Tick -> Slice a
-newSlice f w t = Slice { projection = f w t
-                       , slHistory = BaseState { hrTick = t
-                                               , baseWorld = w
-                                               , hrInput=[]
-                                               }
-                       }
+newSlice f w t = mkSlice f BaseState { hrTick = t
+                                     , hrInput = []
+                                     , baseWorld = w
+                                     }
 
 nextSlice :: Projector b -> Slice a -> Slice b
-nextSlice f s = let s' = Slice { projection = f (world s') (tick s')
-                               , slHistory = Evolution { hrTick = tick s + 1
-                                                       , hrInput=[]
-                                                       , hrPrevious = slHistory s
-                                                       }
-                               }
-                in s'
+nextSlice f s = mkSlice f Evolution { hrTick = tick s + 1
+                                    , hrInput = []
+                                    , hrPrevious = slHistory s
+                                    }
+
+mkSlice :: Projector a -> HistoricalRecord -> Slice a
+mkSlice f hr = s where s = Slice { projection = f (world s) (tick s), slHistory = hr }
 
 trimHistory :: HistorySize -> Slice a -> Slice a
 trimHistory n s = s { slHistory = trimHistory' n (slHistory s) }
