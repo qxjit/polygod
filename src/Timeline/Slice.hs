@@ -75,12 +75,12 @@ mkSlice f hr = s where s = Slice { projection = f (world s) (tick s), slHistory 
 
 trimHistory :: HistorySize -> Slice a -> Slice a
 trimHistory n s = s { slHistory = trimHistory' n (slHistory s) }
-  where trimHistory' _ base | hrIsBase base = base
-        trimHistory' 1 hr = BaseState { hrTick = hrTick hr
-                                      , hrInput = hrInput hr
-                                      , baseWorld = evolve . hrWorld . hrPrevious $ hr
-                                      }
-        trimHistory' n' hr = hr { hrPrevious = trimHistory' (n' - 1) (hrPrevious hr) }
+  where trimHistory' n' hr | hrIsBase hr = hr
+                           | n' == 1 = BaseState { hrTick = hrTick hr
+                                                 , hrInput = hrInput hr
+                                                 , baseWorld = evolve . hrWorld . hrPrevious $ hr
+                                                 }
+                           | otherwise = hr { hrPrevious = trimHistory' (n' - 1) (hrPrevious hr) }
 
 addUserInput :: Tick -> (World -> World) -> Slice a -> Maybe (Slice a)
 addUserInput inputTick f s = do newHistory <- addUserInput' (slHistory s)
