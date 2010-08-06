@@ -18,8 +18,8 @@ type Projector a = World -> Tick -> a
 type UserInputs = [World -> World]
 
 data Slice a = Slice { projection :: a, slHistory :: HistoricalRecord }
-data HistoricalRecord = Evolution { hrTick::Tick, hrInput::UserInputs, hrPrevious::HistoricalRecord }
-                      | BaseState { hrTick::Tick, hrInput::UserInputs, baseWorld::World }
+data HistoricalRecord = Evolution { hrTick::Tick, hrInputs::UserInputs, hrPrevious::HistoricalRecord }
+                      | BaseState { hrTick::Tick, hrInputs::UserInputs, baseWorld::World }
 
 instance Show (Slice a) where
   show slice = "World size " ++ (show $ size (world slice)) ++
@@ -44,12 +44,11 @@ hrLength hr | hrIsBase hr = 1
             | otherwise = 1 + hrLength (hrPrevious hr)
 
 hrWorld :: HistoricalRecord -> World
-hrWorld hr | null (hrInput hr) = hrWorld' hr
-           | otherwise = foldl1' merge worldsWithUserInput
+hrWorld hr | null (hrInputs hr) = hrWorld' hr
+           | otherwise = foldl1' merge [ userInput (hrWorld' hr) | userInput <- hrInputs hr ]
 
   where hrWorld' hr' | hrIsBase hr' = baseWorld hr'
                      | otherwise = evolve . hrWorld . hrPrevious $ hr'
-        worldsWithUserInput = map ($ hrWorld' hr) (hrInput hr)
 
 farApart :: Tick -> Tick -> Bool
 farApart tick1 tick2 = tick2 - tick1 > maxCloseTickDifference && tick1 - tick2 > maxCloseTickDifference
@@ -60,13 +59,13 @@ t1 `after` t2 | farApart t1 t2 = True
 
 newSlice :: Projector a -> World -> Tick -> Slice a
 newSlice f w t = mkSlice f BaseState { hrTick = t
-                                     , hrInput = []
+                                     , hrInputs = []
                                      , baseWorld = w
                                      }
 
 nextSlice :: Projector b -> Slice a -> Slice b
 nextSlice f s = mkSlice f Evolution { hrTick = tick s + 1
-                                    , hrInput = []
+                                    , hrInputs = []
                                     , hrPrevious = slHistory s
                                     }
 
@@ -77,7 +76,7 @@ trimHistory :: HistorySize -> Slice a -> Slice a
 trimHistory n s = s { slHistory = trimHistory' n (slHistory s) }
   where trimHistory' n' hr | hrIsBase hr = hr
                            | n' == 1 = BaseState { hrTick = hrTick hr
-                                                 , hrInput = hrInput hr
+                                                 , hrInputs = hrInputs hr
                                                  , baseWorld = evolve . hrWorld . hrPrevious $ hr
                                                  }
                            | otherwise = hr { hrPrevious = trimHistory' (n' - 1) (hrPrevious hr) }
@@ -85,7 +84,7 @@ trimHistory n s = s { slHistory = trimHistory' n (slHistory s) }
 addUserInput :: Tick -> (World -> World) -> Slice a -> Maybe (Slice a)
 addUserInput inputTick f s = do newHistory <- addUserInput' (slHistory s)
                                 return $ s { slHistory = newHistory }
-  where addUserInput' hr | hrTick hr == inputTick = return $ hr { hrInput = f : hrInput hr }
+  where addUserInput' hr | hrTick hr == inputTick = return $ hr { hrInputs = f : hrInputs hr }
                          | hrIsBase hr = Nothing
                          | otherwise = do newPrevious <- addUserInput' (hrPrevious hr)
                                           return $ hr { hrPrevious = newPrevious }
